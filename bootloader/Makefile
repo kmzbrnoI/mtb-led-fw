@@ -10,9 +10,8 @@ SRC = $(wildcard src/*.c) $(wildcard lib/*.c)
 OPT = s
 CSTANDARD = c99
 CDEFS = -DF_CPU=$(F_CPU)UL
-#DEBUG = dwarf-2
+EXTRAINCDIRS = lib
 
-#CFLAGS = -g$(DEBUG)
 CFLAGS += $(CDEFS)
 CFLAGS += -O$(OPT)
 CFLAGS += -Wall
@@ -60,7 +59,7 @@ OBJ = $(SRC:%.c=$(OBJDIR)/%.o)
 LST = $(SRC:%.c=$(OBJDIR)/%.lst)
 GENDEPFLAGS = -MMD -MP -MF .dep/$(@F).d
 
-ALL_CFLAGS = -mmcu=$(MCU) -I. $(CFLAGS) $(GENDEPFLAGS)
+ALL_CFLAGS = -mmcu=$(MCU) -Isrc $(CFLAGS) $(GENDEPFLAGS)
 
 all: sizebefore build sizeafter
 
