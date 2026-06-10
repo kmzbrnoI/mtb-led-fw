@@ -18,7 +18,7 @@
 #define PIN_UART_TX PD1
 #define PIN_UART_DIR PD3
 
-void io_init(void) {
+static inline void io_init(void) {
 	DDRB = (1 << PIN_LED_GREEN) | (1 << PIN_LED_BLUE);
 	DDRC = 0;
 	DDRD = (1 << PIN_LED_RED);

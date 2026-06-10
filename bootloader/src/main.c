@@ -8,8 +8,8 @@
 #include <util/atomic.h>
 
 #include "io.h"
-#include "../lib/crc16modbus.h"
-#include "../lib/mtbbus.h"
+#include "crc16modbus.h"
+#include "mtbbus.h"
 
 /* All boot_* functions executing SPM instruction need to be called in
  * ATOMIC_BLOCK - interrupts need to be disabled during execution of the function,
@@ -38,7 +38,7 @@ static void mtbbus_send_error(uint8_t code);
 
 #define EEPROM_ADDR_MTBBUS_SPEED           ((uint8_t*)0x01)
 #define EEPROM_ADDR_BOOT                   ((uint8_t*)0x03)
-#define EEPROM_ADDR_IR_SUPPORT             ((uint8_t*)0x06)
+#define EEPROM_ADDR_MTBBUS_ADDR            ((uint8_t*)0x04)
 #define EEPROM_ADDR_BOOTLOADER_VER_MAJOR   ((uint8_t*)0x08)
 #define EEPROM_ADDR_BOOTLOADER_VER_MINOR   ((uint8_t*)0x09)
 #define EEPROM_ADDR_BOOTLOADER_MCUSR       ((uint8_t*)0x0A)
@@ -46,13 +46,11 @@ static void mtbbus_send_error(uint8_t code);
 #define CONFIG_BOOT_NORMAL 0x00
 #define CONFIG_BOOT_FWUPGD 0x01
 
-#define CONFIG_MODULE_TYPE_IR 0x10
-#define CONFIG_MODULE_TYPE_NONIR 0x11
-#define CONFIG_MODULE_TYPE (config_ir_support ? CONFIG_MODULE_TYPE_IR : CONFIG_MODULE_TYPE_NONIR)
+#define CONFIG_MODULE_TYPE 0x40
 #define CONFIG_FW_MAJOR 1
-#define CONFIG_FW_MINOR 4
+#define CONFIG_FW_MINOR 0
 #define CONFIG_PROTO_MAJOR 4
-#define CONFIG_PROTO_MINOR 0
+#define CONFIG_PROTO_MINOR 1
 
 
 __attribute__((used, section(".fwattr"))) struct {
@@ -62,19 +60,18 @@ __attribute__((used, section(".fwattr"))) struct {
 
 typedef union {
 	struct {
-		bool addr_zero : 1;
 		bool crc: 1;
 	} bits;
 	uint8_t all;
 } error_flags_t;
 
-volatile error_flags_t error_flags = {0};
+static volatile error_flags_t error_flags = {0};
 
-volatile uint8_t page = 0xFF;
-volatile uint8_t subpage = 0xFF;
-volatile bool page_erase = false;
-volatile bool page_write = false;
-volatile uint8_t config_ir_support = 0;
+static volatile uint8_t page = 0xFF;
+static volatile uint8_t subpage = 0xFF;
+static volatile bool page_erase = false;
+static volatile bool page_write = false;
+static volatile uint8_t config_ir_support = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -83,9 +80,10 @@ int main() {
 	MCUCR = (1 << IVCE);
 	MCUCR = (1 << IVSEL); // move interrupts to bootloader
 
-	// Disable watchdog
 	eeprom_update_byte(EEPROM_ADDR_BOOTLOADER_MCUSR, MCUSR);
 	MCUSR = 0;
+
+	// Disable watchdog
 	WDTCSR |= (1<<WDCE) | (1<<WDE);
 	WDTCSR = 0x00;
 
@@ -96,7 +94,7 @@ int main() {
 	io_led_blue_off();
 
 	// Setup timer 1 @ 2.5 Hz (period 400 ms)
-	TCCR1B = (1 << WGM12) | (1 << CS12); // 256× prescaler
+	TCCR1B = (1 << WGM12) | (1 << CS12); // CTC mode, prescaler 256
 	OCR1A = 23039;
 	TIMSK1 = (1 << OCIE1A); // enable compare match interrupt
 
@@ -106,8 +104,6 @@ int main() {
 
 	eeprom_update_byte(EEPROM_ADDR_BOOTLOADER_VER_MAJOR, CONFIG_FW_MAJOR);
 	eeprom_update_byte(EEPROM_ADDR_BOOTLOADER_VER_MINOR, CONFIG_FW_MINOR);
-
-	config_ir_support = eeprom_read_byte(EEPROM_ADDR_IR_SUPPORT);
 
 	if ((boot != CONFIG_BOOT_FWUPGD) && (io_button()))
 		check_and_boot();
@@ -151,12 +147,11 @@ void _mtbbus_init(void) {
 	if (mtbbus_speed > MTBBUS_SPEED_MAX)
 		mtbbus_speed = MTBBUS_SPEED_38400;
 
-	io_shift_update();
-	SPCR = 0;
-	uint8_t _mtbbus_addr = io_get_addr_raw();
-	error_flags.bits.addr_zero = (_mtbbus_addr == 0);
+	uint8_t mtbbus_addr = eeprom_read_byte(EEPROM_ADDR_MTBBUS_ADDR);
+	if (mtbbus_addr == 0)
+		mtbbus_addr = 1;
 
-	mtbbus_init(_mtbbus_addr, mtbbus_speed);
+	mtbbus_init(mtbbus_addr, mtbbus_speed);
 	mtbbus_on_receive = mtbbus_received;
 }
 
