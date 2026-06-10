@@ -193,7 +193,7 @@ void _send_next_byte(void) {
 	mtbbus_next_byte_to_send++;
 }
 
-ISR(USART_TX_vect) {
+ISR(USART0_TX_vect) {
 	if (mtbbus_next_byte_to_send < mtbbus_output_buf_size) {
 		_send_next_byte();
 	} else {
@@ -210,7 +210,7 @@ bool mtbbus_can_fill_output_buf(void) {
 ///////////////////////////////////////////////////////////////////////////////
 // Receiving
 
-ISR(USART_RX_vect) {
+ISR(USART0_RX_vect) {
 	uint8_t status = UCSR0A;
 	bool ninth = (UCSR0B >> 1) & 0x01;
 	uint8_t data = UDR0;
