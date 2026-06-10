@@ -143,15 +143,15 @@ int main() {
 }
 
 void _mtbbus_init(void) {
-	uint8_t mtbbus_speed = eeprom_read_byte(EEPROM_ADDR_MTBBUS_SPEED);
-	if (mtbbus_speed > MTBBUS_SPEED_MAX)
-		mtbbus_speed = MTBBUS_SPEED_38400;
+	uint8_t _mtbbus_speed = eeprom_read_byte(EEPROM_ADDR_MTBBUS_SPEED);
+	if (_mtbbus_speed > MTBBUS_SPEED_MAX)
+		_mtbbus_speed = MTBBUS_SPEED_38400;
 
-	uint8_t mtbbus_addr = eeprom_read_byte(EEPROM_ADDR_MTBBUS_ADDR);
-	if (mtbbus_addr == 0)
-		mtbbus_addr = 1;
+	uint8_t _mtbbus_addr = eeprom_read_byte(EEPROM_ADDR_MTBBUS_ADDR);
+	if (_mtbbus_addr == 0)
+		_mtbbus_addr = 1;
 
-	mtbbus_init(mtbbus_addr, mtbbus_speed);
+	mtbbus_init(_mtbbus_addr, _mtbbus_speed);
 	mtbbus_on_receive = mtbbus_received;
 }
 
