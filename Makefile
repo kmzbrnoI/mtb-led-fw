@@ -9,11 +9,10 @@ OBJDIR = obj
 SRC = $(wildcard src/*.c) $(wildcard lib/*.c)
 OPT = 2
 CSTANDARD = c99
-DEBUG = dwarf-2
+EXTRAINCDIRS = lib
 
 CDEFS = -DF_CPU=$(F_CPU)UL -DSUP_MTBBUS_DIAG
 
-CFLAGS = -g$(DEBUG)
 CFLAGS += $(CDEFS)
 CFLAGS += -O$(OPT)
 CFLAGS += -Wall
@@ -68,15 +67,7 @@ ALL_CFLAGS = -mmcu=$(MCU) -I. $(CFLAGS) $(GENDEPFLAGS)
 
 all: sizebefore build sizeafter
 
-build: elf hex allhex eep lss sym
-
-elf: $(TARGET).elf
-hex: $(TARGET).hex
-allhex: $(TARGET)_with_bootloader.hex
-eep: $(TARGET).eep
-lss: $(TARGET).lss
-sym: $(TARGET).sym
-
+build: $(TARGET).elf $(TARGET).hex $(TARGET)_with_bootloader.hex $(TARGET).eep $(TARGET).lss $(TARGET).sym
 
 HEXSIZE = $(SIZE) --target=$(FORMAT) $(TARGET).hex
 ELFSIZE = $(SIZE) --mcu=$(MCU) --format=avr $(TARGET).elf
@@ -143,5 +134,4 @@ $(shell mkdir -p $(dir $(TARGET)) 2>/dev/null)
 
 -include $(shell mkdir .dep 2>/dev/null) $(wildcard .dep/*)
 
-.PHONY : all finish sizebefore sizeafter \
-build elf hex eep lss sym allhex clean program debug gdb-config fuses
+.PHONY : all finish sizebefore sizeafter build clean program fuses
