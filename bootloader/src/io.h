@@ -30,8 +30,8 @@ static inline void io_init(void) {
 	// DDRD |= (1 << PIN_UART_DIR) | (1 << PIN_UART_TX); // TODO is it required?
 }
 
-static inline void io_led_red_on(void) { PORTD &= ~(1 << PIN_LED_RED); }
-static inline void io_led_red_off(void) { PORTD |= (1 << PIN_LED_RED); }
+static inline void io_led_red_on(void) { PORTD |= (1 << PIN_LED_RED); }
+static inline void io_led_red_off(void) { PORTD &= ~(1 << PIN_LED_RED); }
 static inline void io_led_green_on(void) { PORTB |= (1 << PIN_LED_GREEN); }
 static inline void io_led_green_off(void) { PORTB &= ~(1 << PIN_LED_GREEN); }
 static inline void io_led_blue_on(void) { PORTB |= (1 << PIN_LED_BLUE); }
@@ -58,7 +58,7 @@ static inline void io_led_blue(bool state) {
 		io_led_blue_off();
 }
 
-static inline bool io_led_red_state(void) { return !((PORTD >> PIN_LED_RED) & 0x1); }
+static inline bool io_led_red_state(void) { return (PORTD >> PIN_LED_RED) & 0x1; }
 static inline bool io_led_green_state(void) { return (PORTB >> PIN_LED_GREEN) & 0x1; }
 static inline bool io_led_blue_state(void) { return (PORTB >> PIN_LED_BLUE) & 0x1; }
 
