@@ -1,18 +1,18 @@
-MCU = atmega328p
+MCU = atmega328pb
 CRC_POS = 0x6f80
 F_CPU = 14745600
 FORMAT = ihex
-TARGET = build/mtb-uni-v2-bootloader
+TARGET = build/mtb-led-bootloader
 BUILDDIR = build
-TARGET = $(BUILDDIR)/mtb-uni-v2-bootloader
+TARGET = $(BUILDDIR)/mtb-led-bootloader
 OBJDIR = obj
 SRC = $(wildcard src/*.c) $(wildcard lib/*.c)
 OPT = s
 CSTANDARD = c99
 CDEFS = -DF_CPU=$(F_CPU)UL
-DEBUG = dwarf-2
+#DEBUG = dwarf-2
 
-CFLAGS = -g$(DEBUG)
+#CFLAGS = -g$(DEBUG)
 CFLAGS += $(CDEFS)
 CFLAGS += -O$(OPT)
 CFLAGS += -Wall
@@ -32,9 +32,6 @@ AVRDUDE_PORT = /dev/ttyUSB0    # programmer connected to serial device
 AVRDUDE_WRITE_FLASH = -U flash:w:$(TARGET).hex
 
 AVRDUDE_FLAGS = -p $(MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER)
-AVRDUDE_FLAGS += $(AVRDUDE_NO_VERIFY)
-AVRDUDE_FLAGS += $(AVRDUDE_VERBOSE)
-AVRDUDE_FLAGS += $(AVRDUDE_ERASE_COUNTER)
 
 #============================================================================
 
@@ -43,27 +40,20 @@ CC = avr-gcc
 OBJCOPY = avr-objcopy
 OBJDUMP = avr-objdump
 SIZE = avr-size
-AR = avr-ar rcs
 NM = avr-nm
 AVRDUDE = avrdude
-REMOVE = rm -f
 REMOVEDIR = rm -rf
 
 
 # Define Messages
 # English
-MSG_ERRORS_NONE = Errors: none
 MSG_SIZE_BEFORE = Size before:
 MSG_SIZE_AFTER = Size after:
-MSG_COFF = Converting to AVR COFF:
-MSG_EXTENDED_COFF = Converting to AVR Extended COFF:
 MSG_FLASH = Creating load file for Flash:
 MSG_EXTENDED_LISTING = Creating Extended Listing:
 MSG_SYMBOL_TABLE = Creating Symbol Table:
 MSG_LINKING = Linking:
 MSG_COMPILING = Compiling C:
-MSG_ASSEMBLING = Assembling:
-MSG_CLEANING = Cleaning project:
 
 
 OBJ = $(SRC:%.c=$(OBJDIR)/%.o)
@@ -72,14 +62,9 @@ GENDEPFLAGS = -MMD -MP -MF .dep/$(@F).d
 
 ALL_CFLAGS = -mmcu=$(MCU) -I. $(CFLAGS) $(GENDEPFLAGS)
 
-all: gccversion sizebefore build sizeafter
+all: sizebefore build sizeafter
 
-build: elf hex lss sym
-
-elf: $(TARGET).elf
-hex: $(TARGET).hex
-lss: $(TARGET).lss
-sym: $(TARGET).sym
+build: $(TARGET).elf $(TARGET).hex $(TARGET).lss $(TARGET).sym
 
 HEXSIZE = $(SIZE) --target=$(FORMAT) $(TARGET).hex
 ELFSIZE = $(SIZE) --mcu=$(MCU) --format=avr $(TARGET).elf
@@ -93,7 +78,7 @@ sizeafter:
 	2>/dev/null; echo; fi
 
 program: $(TARGET).hex
-	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH) 
+	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH)
 
 $(TARGET)_with_bootloader.hex: $
 
@@ -123,7 +108,7 @@ $(BUILDDIR)/%.sym: $(BUILDDIR)/%.elf
 $(OBJDIR)/%.o : %.c
 	@echo
 	@echo $(MSG_COMPILING) $<
-	$(CC) -c $(ALL_CFLAGS) $< -o $@ 
+	$(CC) -c $(ALL_CFLAGS) $< -o $@
 
 %.s : %.c
 	$(CC) -S $(ALL_CFLAGS) $< -o $@
@@ -138,5 +123,4 @@ $(shell mkdir -p $(dir $(TARGET)) 2>/dev/null)
 
 -include $(shell mkdir .dep 2>/dev/null) $(wildcard .dep/*)
 
-.PHONY : all finish sizebefore sizeafter gccversion \
-build elf hex lss sym coff extcoff clean clean_list program debug gdb-config
+.PHONY : all sizebefore sizeafter build clean program
