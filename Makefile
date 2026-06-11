@@ -4,7 +4,7 @@ FUSES = -U lfuse:w:0xFE:m -U hfuse:w:0xD0:m -U efuse:w:0xFC:m -U lock:w:0xEF:m
 F_CPU = 14745600
 FORMAT = ihex
 BUILDDIR = build
-TARGET = $(BUILDDIR)/mtb-uni-v2
+TARGET = $(BUILDDIR)/mtb-led
 OBJDIR = obj
 SRC = $(wildcard src/*.c) $(wildcard lib/*.c)
 OPT = 2
@@ -87,9 +87,9 @@ program: $(TARGET)_with_bootloader.hex $(TARGET).eep
 fuses:
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(FUSES)
 
-$(TARGET)_with_bootloader.hex: $(TARGET).hex bootloader/build/mtb-uni-v2-bootloader.hex
+$(TARGET)_with_bootloader.hex: $(TARGET).hex bootloader/build/mtb-led-bootloader.hex
 	head -n -1 $< > $@
-	tail -n +2 bootloader/build/mtb-uni-v2-bootloader.hex >> $@
+	tail -n +2 bootloader/build/mtb-led-bootloader.hex >> $@
 
 $(BUILDDIR)/%.hex: $(BUILDDIR)/%.elf
 	@echo

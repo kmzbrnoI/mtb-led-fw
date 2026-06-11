@@ -20,6 +20,8 @@ extern uint8_t config_pwm[NO_OUTPUTS];
 extern uint8_t config_mtbbus_addr;
 extern uint8_t config_mtbbus_speed;
 
+#define CONFIG_SIZE (sizeof(config_safe_state)+sizeof(config_pwm))
+
 ///////////////////////////////////////////////////////////////////////////////
 
 // Warning: these functions take long time to execute
