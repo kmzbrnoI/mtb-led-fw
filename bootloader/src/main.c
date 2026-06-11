@@ -148,12 +148,13 @@ void _mtbbus_init(void) {
 	if (_mtbbus_speed > MTBBUS_SPEED_MAX)
 		_mtbbus_speed = MTBBUS_SPEED_38400;
 
+	uint8_t _mtbbus_addr;
 	uint8_t version = eeprom_read_byte(EEPROM_ADDR_VERSION);
 	if (version == 0xFF) {
 		// default EEPROM content
 		_mtbbus_addr = 1;
 	} else {
-		uint8_t _mtbbus_addr = eeprom_read_byte(EEPROM_ADDR_MTBBUS_ADDR);
+		_mtbbus_addr = eeprom_read_byte(EEPROM_ADDR_MTBBUS_ADDR);
 		if (_mtbbus_addr == 0)
 			_mtbbus_addr = 1;
 	}
