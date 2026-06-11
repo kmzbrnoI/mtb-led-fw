@@ -18,6 +18,7 @@ CFLAGS += -O$(OPT)
 CFLAGS += -Wall
 CFLAGS += -pedantic
 CFLAGS += -Wa,-adhlns=$(<:%.c=$(OBJDIR)/%.lst)
+CFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 CFLAGS += -std=$(CSTANDARD)
 
 LDFLAGS = -Wl,-Map=$(TARGET).map,--cref
@@ -63,7 +64,7 @@ OBJ = $(SRC:%.c=$(OBJDIR)/%.o)
 LST = $(SRC:%.c=$(OBJDIR)/%.lst)
 GENDEPFLAGS = -MMD -MP -MF .dep/$(@F).d
 
-ALL_CFLAGS = -mmcu=$(MCU) -I. $(CFLAGS) $(GENDEPFLAGS)
+ALL_CFLAGS = -mmcu=$(MCU) -Isrc $(CFLAGS) $(GENDEPFLAGS)
 
 all: sizebefore build sizeafter
 

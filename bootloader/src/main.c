@@ -36,6 +36,7 @@ static void mtbbus_send_error(uint8_t code);
 ///////////////////////////////////////////////////////////////////////////////
 // Defines & global variables
 
+#define EEPROM_ADDR_VERSION                ((uint8_t*)0x00)
 #define EEPROM_ADDR_MTBBUS_SPEED           ((uint8_t*)0x01)
 #define EEPROM_ADDR_BOOT                   ((uint8_t*)0x03)
 #define EEPROM_ADDR_MTBBUS_ADDR            ((uint8_t*)0x04)
@@ -147,9 +148,15 @@ void _mtbbus_init(void) {
 	if (_mtbbus_speed > MTBBUS_SPEED_MAX)
 		_mtbbus_speed = MTBBUS_SPEED_38400;
 
-	uint8_t _mtbbus_addr = eeprom_read_byte(EEPROM_ADDR_MTBBUS_ADDR);
-	if (_mtbbus_addr == 0)
+	uint8_t version = eeprom_read_byte(EEPROM_ADDR_VERSION);
+	if (version == 0xFF) {
+		// default EEPROM content
 		_mtbbus_addr = 1;
+	} else {
+		uint8_t _mtbbus_addr = eeprom_read_byte(EEPROM_ADDR_MTBBUS_ADDR);
+		if (_mtbbus_addr == 0)
+			_mtbbus_addr = 1;
+	}
 
 	mtbbus_init(_mtbbus_addr, _mtbbus_speed);
 	mtbbus_on_receive = mtbbus_received;

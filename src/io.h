@@ -1,9 +1,8 @@
 #ifndef _IO_H_
 #define _IO_H_
 
-/* Raw input-output operation of MTB-UNI v4 module.
- * This unit does not perform any debouncing nor any complicated IO stuff.
- * It just abstracts IO with nice & fast functions.
+/* Raw input-output operation of MTB-LED module.
+ * This unit just abstracts IO with nice & fast functions.
  */
 
 #include <stdbool.h>
@@ -11,7 +10,6 @@
 #include <avr/io.h>
 
 #define NO_OUTPUTS 32
-#define NO_INPUTS_ADDR 8
 
 #define PIN_LED_RED PD7
 #define PIN_LED_GREEN PB0

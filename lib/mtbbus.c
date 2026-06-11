@@ -54,7 +54,7 @@ void mtbbus_init(uint8_t addr, uint8_t speed) {
 	TCCR2B = (1 << CS21) | (1 << CS20); // prescaler 32
 	OCR2A = 69;
 
-	DDRD |= (1 << PIN_UART_DIR);
+	DDRD |= (1 << PIN_UART_DIR); // PIN_UART_TX too?
 	uart_in();
 
 	mtbbus_set_speed(speed);
