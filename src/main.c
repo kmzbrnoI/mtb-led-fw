@@ -80,7 +80,7 @@ volatile uint8_t mtbbus_auto_speed_last;
 #define MTBBUS_AUTO_SPEED_TIMEOUT 20 // 200 ms
 
 volatile uint8_t diag_timer = 0;
-volatile bool t3_elapsed = false;
+volatile bool t1_elapsed = false;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -90,8 +90,8 @@ int main() {
 	while (true) {
 		mtbbus_update();
 
-		if (t3_elapsed) {
-			t3_elapsed = false;
+		if (t1_elapsed) {
+			t1_elapsed = false;
 
 			leds_update();
 			mtbbus_update(); // poll mtbbus again so we don't miss any data
@@ -176,6 +176,8 @@ void init(void) {
 	TIMSK1 = (1 << OCIE1A); // enable compare match interrupt
 	OCR1A = 18430;
 
+	out_init();
+
 	config_load();
 	//outputs_set_full(config_safe_state);
 
@@ -221,9 +223,9 @@ ISR(TIMER1_COMPA_vect) {
 	if ((TCNT1H > 0) && (TCNT1H < OCR1AH))
 		mtbbus_warn_flags.bits.missed_timer = true;
 
-	if (t3_elapsed) // timer 3 was not processed since last interrupt -> emit warning
+	if (t1_elapsed) // timer 3 was not processed since last interrupt -> emit warning
 		mtbbus_warn_flags.bits.missed_timer = true;
-	t3_elapsed = true;
+	t1_elapsed = true;
 
 	if (_init_counter < INIT_TIME)
 		_init_counter++;

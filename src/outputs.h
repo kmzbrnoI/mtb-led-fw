@@ -9,5 +9,6 @@
 
 #include "io.h"
 
+void out_init(void);
 
 #endif
