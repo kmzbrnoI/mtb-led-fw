@@ -4,6 +4,7 @@
 #include "mtbbus.h"
 
 uint8_t config_safe_state[NO_OUTPUTS/8];
+uint8_t config_pwm[NO_OUTPUTS];
 bool config_write = false;
 uint8_t config_mtbbus_addr;
 uint8_t config_mtbbus_speed;
@@ -17,6 +18,7 @@ uint8_t config_mtbbus_speed;
 #define EEPROM_ADDR_BOOTLOADER_VER_MINOR   ((uint8_t*)0x09)
 #define EEPROM_ADDR_BOOTLOADER_MCUSR       ((uint8_t*)0x0A)
 #define EEPROM_ADDR_SAFE_STATE             ((uint8_t*)0x10)
+#define EEPROM_ADDR_PWM                    ((uint8_t*)0x20)
 
 
 void config_load(void) {
@@ -26,6 +28,7 @@ void config_load(void) {
 		config_mtbbus_speed = MTBBUS_SPEED_38400;
 		config_mtbbus_addr = 1;
 		memset(config_safe_state, 0, sizeof(config_safe_state));
+		memset(config_pwm, 100, sizeof(config_pwm));
 		while (!config_save()); // loop until everything saved
 		return;
 	}
@@ -43,6 +46,7 @@ void config_load(void) {
 		eeprom_write_byte(EEPROM_ADDR_BOOT, CONFIG_BOOT_NORMAL);
 
 	eeprom_read_block(config_safe_state, EEPROM_ADDR_SAFE_STATE, sizeof(config_safe_state));
+	eeprom_read_block(config_pwm, EEPROM_ADDR_PWM, sizeof(config_pwm));
 }
 
 bool config_save(void) {
@@ -60,6 +64,11 @@ bool config_save(void) {
 	for (uint8_t i = 0; i < sizeof(config_safe_state); i++) {
 		if (!eeprom_is_ready()) return false;
 		eeprom_update_byte(EEPROM_ADDR_SAFE_STATE+i, config_safe_state[i]);
+	}
+
+	for (uint8_t i = 0; i < sizeof(config_pwm); i++) {
+		if (!eeprom_is_ready()) return false;
+		eeprom_update_byte(EEPROM_ADDR_PWM+i, config_pwm[i]);
 	}
 
 	return eeprom_is_ready(); // true iff no write done
