@@ -84,6 +84,9 @@ sizeafter:
 program: $(TARGET)_with_bootloader.hex $(TARGET).eep
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH)
 
+program_debug: $(TARGET).hex
+	$(AVRDUDE) $(AVRDUDE_FLAGS) -V -U flash:w:$(TARGET).hex
+
 fuses:
 	$(AVRDUDE) $(AVRDUDE_FLAGS) $(FUSES)
 
@@ -135,4 +138,4 @@ $(shell mkdir -p $(dir $(TARGET)) 2>/dev/null)
 
 -include $(shell mkdir .dep 2>/dev/null) $(wildcard .dep/*)
 
-.PHONY : all finish sizebefore sizeafter build clean program fuses
+.PHONY : all finish sizebefore sizeafter build clean program fuses program_debug

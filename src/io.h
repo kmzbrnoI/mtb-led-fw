@@ -25,19 +25,12 @@
 
 #define PIN_VPRG PC1
 #define PIN_DCPRG PD2
-#define PIN_XLAT
-#define PIN_BLANK
-#define PIN_XERR
+#define PIN_XLAT PC3
+#define PIN_BLANK PC4
+#define PIN_XERR PC5
 #define PIN_GSCLK PD2
 
 void io_init(void);
-
-void io_set_output_raw(uint8_t onum, bool state);
-void io_set_outputs_raw(uint16_t state);
-void io_set_outputs_raw_mask(uint16_t state, uint16_t mask);
-uint16_t io_get_outputs_raw(void);
-
-bool io_get_output_raw(uint8_t onum);
 
 static inline void io_led_red_on(void) { PORTD |= (1 << PIN_LED_RED); }
 static inline void io_led_red_off(void) { PORTD &= ~(1 << PIN_LED_RED); }
@@ -99,8 +92,5 @@ static inline void io_debug2_toggle(void) { io_debug2_set(!io_debug2_get()); }
 
 static inline void uart_out(void) { PORTD |= (1 << PIN_UART_DIR); }
 static inline void uart_in(void) { PORTD &= ~(1 << PIN_UART_DIR); }
-
-//void io_shift_update(void);
-//void io_shift_load(void);
 
 #endif
