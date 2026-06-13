@@ -75,9 +75,9 @@ void _out_spi_send(void) {
 		while (!(SPSR0 & (1<<SPIF)));
 		SPDR0 = (out_first) ? config_pwm[outi] : 0;
 		while (!(SPSR0 & (1<<SPIF)));
-		SPDR0 = 0; // TODO
+		SPDR0 = (out_second) ? (config_pwm[outi+1] >> 4) : 0;
 		while (!(SPSR0 & (1<<SPIF)));
-		SPDR0 = (out_second) ? config_pwm[outi+1] : 0;
+		SPDR0 = (out_second) ? (config_pwm[outi+1] << 4) : 0;
 		// wait at the beginning of next iteration
 	}
 
