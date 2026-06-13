@@ -178,7 +178,7 @@ void init(void) {
 
 	config_load();
 
-	out_init(0xFFFFFFFF); // TODO use config_safe_state
+	out_init(1); // TODO use config_safe_state
 
 	mtbbus_init(config_mtbbus_addr, config_mtbbus_speed);
 	mtbbus_on_receive = mtbbus_received;
@@ -293,7 +293,7 @@ void btn_on_depressed(void) {
 }
 
 void btn_short_press(void) {
-	out_set(0xDDDDDDDD);
+	out_set(outputs_state << 1);
 
 	if (mtbbus_auto_speed_in_progress) {
 		autodetect_mtbbus_speed_stop();

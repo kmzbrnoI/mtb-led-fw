@@ -8,11 +8,16 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 uint32_t outputs_state = 0;
+const uint8_t OUTPUT_MAP[NO_OUTPUTS] = {
+	 7,  6,  5,  4,  3,  2,  1,  0,
+	31, 30, 29, 28, 27, 26, 25, 24,
+	23, 22, 21, 20, 19, 18, 17, 16,
+	15, 14, 13, 12, 11, 10,  9,  8
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 
 static void _out_spi_send(void);
-static inline void _spi_send_byte(uint8_t byte);
 static inline void _xlat_enable(void);
 static inline void _xlat_disable(void);
 
@@ -58,22 +63,25 @@ void out_set(uint32_t state) {
 	_xlat_enable(); // propagate to GS register on next proper cycle
 }
 
-void _spi_send_byte(uint8_t byte) {
-	SPDR0 = byte;
-	while (!(SPSR0 & (1<<SPIF)));
-}
-
 void _out_spi_send(void) {
-	// Typical time of this function: ?? us
-	uint32_t state = outputs_state;
+	SPDR0 = 0; // so first while does not loop
 
+	// Typical time of this function: ?? us
 	// need to send 2 outputs in one iteration, because each output is 12 bits
 	for (size_t outi = 0; outi < NO_OUTPUTS; outi += 2) {
-		_spi_send_byte((state&1) ? config_pwm[outi] : 0);
-		_spi_send_byte(0); // TODO better
-		_spi_send_byte((state&2) ? config_pwm[outi+1] : 0);
-		state >>= 2;
+		const bool out_first = (outputs_state >> OUTPUT_MAP[outi]) & 1;
+		const bool out_second = (outputs_state >> OUTPUT_MAP[outi+1]) & 1;
+
+		while (!(SPSR0 & (1<<SPIF)));
+		SPDR0 = (out_first) ? config_pwm[outi] : 0;
+		while (!(SPSR0 & (1<<SPIF)));
+		SPDR0 = 0; // TODO
+		while (!(SPSR0 & (1<<SPIF)));
+		SPDR0 = (out_second) ? config_pwm[outi+1] : 0;
+		// wait at the beginning of next iteration
 	}
+
+	while (!(SPSR0 & (1<<SPIF)));
 }
 
 void _xlat_enable(void) {
