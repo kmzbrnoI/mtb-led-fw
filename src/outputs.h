@@ -11,7 +11,7 @@
 
 extern uint32_t outputs_state;
 
-void out_init(void);
+void out_init(uint32_t state);
 void out_set(uint32_t state);
 
 #endif

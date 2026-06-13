@@ -176,10 +176,9 @@ void init(void) {
 	TIMSK3 = (1 << OCIE3A); // enable compare match interrupt
 	OCR3A = 18430;
 
-	out_init();
-
 	config_load();
-	out_set(0x11111111); // TODO use config_safe_state
+
+	out_init(0xFFFFFFFF); // TODO use config_safe_state
 
 	mtbbus_init(config_mtbbus_addr, config_mtbbus_speed);
 	mtbbus_on_receive = mtbbus_received;

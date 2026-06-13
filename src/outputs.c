@@ -13,10 +13,12 @@ uint32_t outputs_state = 0;
 
 static void _out_spi_send(void);
 static inline void _spi_send_byte(uint8_t byte);
+static inline void _xlat_enable(void);
+static inline void _xlat_disable(void);
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void out_init(void) {
+void out_init(uint32_t state) {
 	// Setup pins
 	DDRD |= (1 << PIN_GSCLK);
 	PORTD |= (1 << PIN_GSCLK); // PORT must be active for CTC mode output, see datasheet p. 166
@@ -31,22 +33,29 @@ void out_init(void) {
 	OCR1A = 1; // duty factor on OC1A, XLAT is inside BLANK
 	OCR1B = 2; // duty factor on BLANK (larger than OCR1A (XLAT))
 	ICR1 = 8192;
-	TCCR1B |= _BV(CS10);   // start timer
 
 	// Setup timer 4 @ ~1.054 MHz (GSCLK pin)
 	TCCR4A = (1 << COM4B0); // OC4B toggles output pin PD2
 	TCCR4B = (1 << WGM42); // CTC mode
 	OCR4A = 0; // as-fast-as-possible
-	TCCR4B |= (1 << CS40); // start timer, no prescaler
 
 	// Setup SPI
 	SPSR0 = (1 << SPI2X);
 	SPCR0 = (1 << SPE) | (1 << MSTR); // enable SPI, master mode, frequency=f_osc/2
+
+	out_set(state);
+
+	PORTB |= (1 << PIN_BLANK) | (1 << PIN_XLAT); // start with BLANK&XLAT high
+	TCCR1B |= (1 << CS10); // start timer, no prescaler
+	TCCR4B |= (1 << CS40); // start timer, no prescaler
+	PORTB &= ~(1 << PIN_XLAT); // when _xlat_disable caller, signal must go to LOW
 }
 
 void out_set(uint32_t state) {
 	outputs_state = state;
+	_xlat_disable(); // do not propagate to GS register during SPI shift
 	_out_spi_send();
+	_xlat_enable(); // propagate to GS register on next proper cycle
 }
 
 void _spi_send_byte(uint8_t byte) {
@@ -67,3 +76,10 @@ void _out_spi_send(void) {
 	}
 }
 
+void _xlat_enable(void) {
+	TCCR1A |= (1 << COM1A1);
+}
+
+void _xlat_disable(void) {
+	TCCR1A &= ~(1 << COM1A1);
+}
