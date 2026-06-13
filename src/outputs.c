@@ -64,21 +64,31 @@ void out_set(uint32_t state) {
 }
 
 void _out_spi_send(void) {
+	// Typical time of this function: 150 us
 	SPDR0 = 0; // so first while does not loop
 
-	// Typical time of this function: ?? us
-	// need to send 2 outputs in one iteration, because each output is 12 bits
-	for (size_t outi = 0; outi < NO_OUTPUTS; outi += 2) {
-		const bool out_first = (outputs_state >> OUTPUT_MAP[outi]) & 1;
-		const bool out_second = (outputs_state >> OUTPUT_MAP[outi+1]) & 1;
+	uint8_t buf[48]; // NO_OUTPUTS * 1.5 (each output is 12 bits)
+	memset(buf, 0, sizeof(buf));
 
+	// need to process 2 outputs in one iteration, because each output is 12 bits
+	uint32_t _outputs = (outputs_state << 24) | (outputs_state >> 8);
+	uint8_t bufi = 0;
+	for (uint8_t i = 0; i < NO_OUTPUTS; i += 2) {
+		if (_outputs&0x80000000) {
+			buf[bufi] = config_pwm[OUTPUT_MAP[i]];
+		}
+		if (_outputs&0x40000000) {
+			const uint8_t pwm = config_pwm[OUTPUT_MAP[i+1]];
+			buf[bufi+1] = pwm >> 4;
+			buf[bufi+2] = pwm << 4;
+		}
+		_outputs <<= 2;
+		bufi += 3;
+	}
+
+	for (uint8_t i = 0; i < sizeof(buf); i++) {
 		while (!(SPSR0 & (1<<SPIF)));
-		SPDR0 = (out_first) ? config_pwm[outi] : 0;
-		while (!(SPSR0 & (1<<SPIF)));
-		SPDR0 = (out_second) ? (config_pwm[outi+1] >> 4) : 0;
-		while (!(SPSR0 & (1<<SPIF)));
-		SPDR0 = (out_second) ? (config_pwm[outi+1] << 4) : 0;
-		// wait at the beginning of next iteration
+		SPDR0 = buf[i];
 	}
 
 	while (!(SPSR0 & (1<<SPIF)));

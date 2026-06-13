@@ -13,7 +13,7 @@ EXTRAINCDIRS = lib
 
 CDEFS = -DF_CPU=$(F_CPU)UL -DSUP_MTBBUS_DIAG
 
-CFLAGS += $(CDEFS)
+CFLAGS += $(CDEFS) -gdwarf-2
 CFLAGS += -O$(OPT)
 CFLAGS += -Wall
 CFLAGS += -pedantic

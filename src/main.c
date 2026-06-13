@@ -165,11 +165,11 @@ void init(void) {
 	io_led_green_on();
 	io_led_blue_on();
 
-	// Setup timer 0 @ 20 kHz (period 50 us)
+	// Setup timer 0 @ 2 kHz (period 500 us)
 	TCCR0A = (1 << WGM01); // CTC mode
-	TCCR0B = (1 << CS01); // CTC mode, prescaler 8×
+	TCCR0B = (1 << CS01) | (1 << CS00); // CTC mode, prescaler 64×
 	TIMSK0 = (1 << OCIE0A); // enable compare match interrupt
-	OCR0A = 91;
+	OCR0A = 115;
 
 	// Setup timer 3 @ 100 Hz (period 10 ms)
 	TCCR3B = (1 << WGM32) | (1 << CS31); // CRC mode, 8× prescaler
@@ -178,7 +178,7 @@ void init(void) {
 
 	config_load();
 
-	out_init(1); // TODO use config_safe_state
+	out_init(0x100); // TODO use config_safe_state
 
 	mtbbus_init(config_mtbbus_addr, config_mtbbus_speed);
 	mtbbus_on_receive = mtbbus_received;
@@ -200,20 +200,10 @@ void on_initialized(void) {
 }
 
 ISR(TIMER0_COMPA_vect) {
-
-	// Timer 0 @ 20 kHz (period 50 us)
-	static size_t counter = 0;
-
-	/*if ((!inputs_disabled) && (config_ir_support))
-		ir_update_50us();*/
-
-	counter++;
-	if (counter >= 10) { // 2 kHz (500 us)
-		if (inputs_debounce_to_update) // debouncing was not executed since last call -> emit warning
-			mtbbus_warn_flags.bits.missed_timer = true;
-		inputs_debounce_to_update = true;
-		counter = 0;
-	}
+	// Timer 0 @ 2 kHz (period 500 us)
+	if (inputs_debounce_to_update) // debouncing was not executed since last call -> emit warning
+		mtbbus_warn_flags.bits.missed_timer = true;
+	inputs_debounce_to_update = true;
 }
 
 ISR(TIMER3_COMPA_vect) {
