@@ -80,7 +80,7 @@ volatile uint8_t mtbbus_auto_speed_last;
 #define MTBBUS_AUTO_SPEED_TIMEOUT 20 // 200 ms
 
 volatile uint8_t diag_timer = 0;
-volatile bool t1_elapsed = false;
+volatile bool t3_elapsed = false;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -90,8 +90,8 @@ int main() {
 	while (true) {
 		mtbbus_update();
 
-		if (t1_elapsed) {
-			t1_elapsed = false;
+		if (t3_elapsed) {
+			t3_elapsed = false;
 
 			leds_update();
 			mtbbus_update(); // poll mtbbus again so we don't miss any data
@@ -171,17 +171,15 @@ void init(void) {
 	TIMSK0 = (1 << OCIE0A); // enable compare match interrupt
 	OCR0A = 91;
 
-	// Setup timer 1 @ 100 Hz (period 10 ms)
-	TCCR1B = (1 << WGM12) | (1 << CS11); // CRC mode, 8× prescaler
-	TIMSK1 = (1 << OCIE1A); // enable compare match interrupt
-	OCR1A = 18430;
+	// Setup timer 3 @ 100 Hz (period 10 ms)
+	TCCR3B = (1 << WGM32) | (1 << CS31); // CRC mode, 8× prescaler
+	TIMSK3 = (1 << OCIE3A); // enable compare match interrupt
+	OCR3A = 18430;
 
 	out_init();
 
 	config_load();
-	//outputs_set_full(config_safe_state);
-
-	//io_shift_update();
+	out_set(0x11111111); // TODO use config_safe_state
 
 	mtbbus_init(config_mtbbus_addr, config_mtbbus_speed);
 	mtbbus_on_receive = mtbbus_received;
@@ -203,6 +201,7 @@ void on_initialized(void) {
 }
 
 ISR(TIMER0_COMPA_vect) {
+
 	// Timer 0 @ 20 kHz (period 50 us)
 	static size_t counter = 0;
 
@@ -218,14 +217,14 @@ ISR(TIMER0_COMPA_vect) {
 	}
 }
 
-ISR(TIMER1_COMPA_vect) {
+ISR(TIMER3_COMPA_vect) {
 	// Timer 1 @ 100 Hz (period 10 ms)
-	if ((TCNT1H > 0) && (TCNT1H < OCR1AH))
+	if ((TCNT1H > 0) && (TCNT3H < OCR3AH))
 		mtbbus_warn_flags.bits.missed_timer = true;
 
-	if (t1_elapsed) // timer 3 was not processed since last interrupt -> emit warning
+	if (t3_elapsed) // timer 3 was not processed since last interrupt -> emit warning
 		mtbbus_warn_flags.bits.missed_timer = true;
-	t1_elapsed = true;
+	t3_elapsed = true;
 
 	if (_init_counter < INIT_TIME)
 		_init_counter++;
@@ -295,6 +294,8 @@ void btn_on_depressed(void) {
 }
 
 void btn_short_press(void) {
+	out_set(0xDDDDDDDD);
+
 	if (mtbbus_auto_speed_in_progress) {
 		autodetect_mtbbus_speed_stop();
 		return;

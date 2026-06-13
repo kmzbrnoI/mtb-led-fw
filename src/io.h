@@ -13,7 +13,7 @@
 
 #define PIN_LED_RED PD7
 #define PIN_LED_GREEN PB0
-#define PIN_LED_BLUE PB1
+#define PIN_LED_BLUE PD6
 
 #define PIN_BUTTON PD5
 #define PIN_DEBUG1 PE0
@@ -24,9 +24,9 @@
 #define PIN_UART_DIR PD3
 
 #define PIN_VPRG PC1
-#define PIN_DCPRG PD2
-#define PIN_XLAT PC3
-#define PIN_BLANK PC4
+#define PIN_DCPRG PC2
+#define PIN_XLAT PB1 // OC1A used
+#define PIN_BLANK PB2 // OC1B used
 #define PIN_XERR PC5
 #define PIN_GSCLK PD2
 
@@ -36,8 +36,8 @@ static inline void io_led_red_on(void) { PORTD |= (1 << PIN_LED_RED); }
 static inline void io_led_red_off(void) { PORTD &= ~(1 << PIN_LED_RED); }
 static inline void io_led_green_on(void) { PORTB |= (1 << PIN_LED_GREEN); }
 static inline void io_led_green_off(void) { PORTB &= ~(1 << PIN_LED_GREEN); }
-static inline void io_led_blue_on(void) { PORTB |= (1 << PIN_LED_BLUE); }
-static inline void io_led_blue_off(void) { PORTB &= ~(1 << PIN_LED_BLUE); }
+static inline void io_led_blue_on(void) { PORTD |= (1 << PIN_LED_BLUE); }
+static inline void io_led_blue_off(void) { PORTD &= ~(1 << PIN_LED_BLUE); }
 
 static inline void io_led_red(bool state) {
 	if (state)
@@ -62,7 +62,7 @@ static inline void io_led_blue(bool state) {
 
 static inline bool io_led_red_state(void) { return (PORTD >> PIN_LED_RED) & 0x1; }
 static inline bool io_led_green_state(void) { return (PORTB >> PIN_LED_GREEN) & 0x1; }
-static inline bool io_led_blue_state(void) { return (PORTB >> PIN_LED_BLUE) & 0x1; }
+static inline bool io_led_blue_state(void) { return (PORTD >> PIN_LED_BLUE) & 0x1; }
 
 static inline void io_led_red_toggle(void) { io_led_red(!io_led_red_state()); }
 static inline void io_led_green_toggle(void) { io_led_green(!io_led_green_state()); }
@@ -92,5 +92,11 @@ static inline void io_debug2_toggle(void) { io_debug2_set(!io_debug2_get()); }
 
 static inline void uart_out(void) { PORTD |= (1 << PIN_UART_DIR); }
 static inline void uart_in(void) { PORTD &= ~(1 << PIN_UART_DIR); }
+
+static inline void io_vprg_on(void) { PORTC |= (1 << PIN_VPRG); }
+static inline void io_vprg_off(void) { PORTC &= ~(1 << PIN_VPRG); }
+
+static inline void io_dcprg_on(void) { PORTC |= (1 << PIN_DCPRG); }
+static inline void io_dcprg_off(void) { PORTC &= ~(1 << PIN_DCPRG); }
 
 #endif

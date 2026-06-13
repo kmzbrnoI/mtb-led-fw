@@ -1,71 +1,69 @@
+#include <util/delay.h>
 #include <stdbool.h>
 #include <string.h>
 #include "outputs.h"
 #include "io.h"
+#include "config.h"
+
+///////////////////////////////////////////////////////////////////////////////
+
+uint32_t outputs_state = 0;
+
+///////////////////////////////////////////////////////////////////////////////
+
+static void _out_spi_send(void);
+static inline void _spi_send_byte(uint8_t byte);
+
+///////////////////////////////////////////////////////////////////////////////
 
 void out_init(void) {
+	// Setup pins
 	DDRD |= (1 << PIN_GSCLK);
 	PORTD |= (1 << PIN_GSCLK); // PORT must be active for CTC mode output, see datasheet p. 166
+	DDRB |= (1 << PIN_BLANK) | (1 << PIN_XLAT);
+	DDRC |= (1 << PIN_VPRG) | (1 << PIN_DCPRG);
+	io_vprg_off();
+	io_dcprg_off();
+
+	// Setup timer 1 for XLAT & BLANK
+	TCCR1A = (1 << COM1A1) | (1 << COM1B1); // non inverting, Clear OC1A/OC1B on Compare Match when up-counting. Set OC1A/OC1B on Compare Match when down-counting.
+	TCCR1B = (1 << WGM13); // Phase/freq correct PWM, ICR1 top
+	OCR1A = 1; // duty factor on OC1A, XLAT is inside BLANK
+	OCR1B = 2; // duty factor on BLANK (larger than OCR1A (XLAT))
+	ICR1 = 8192;
+	TCCR1B |= _BV(CS10);   // start timer
 
 	// Setup timer 4 @ ~1.054 MHz (GSCLK pin)
 	TCCR4A = (1 << COM4B0); // OC4B toggles output pin PD2
-	TCCR4B = (1 << CS40) | (1 << WGM42); // CTC mode, no prescaler
-	OCR4A = 6;
+	TCCR4B = (1 << WGM42); // CTC mode
+	OCR4A = 0; // as-fast-as-possible
+	TCCR4B |= (1 << CS40); // start timer, no prescaler
 
-	//SPCR = (1 << SPE) | (1 << MSTR) | (1 << CPOL); // enable SPI, SPI master, frequency=f_osc/4
+	// Setup SPI
+	SPSR0 = (1 << SPI2X);
+	SPCR0 = (1 << SPE) | (1 << MSTR); // enable SPI, master mode, frequency=f_osc/2
 }
 
-/*void io_shift_update() {
-	// Typical time of this function: 10 us
-
-	uint16_t buf_inputs = 0;
-	uint8_t read;
-
-	// Input load
-	PORTD |= (1 << PIN_INPUT_SHIFT);
-	__asm__("nop");
-	__asm__("nop");
-
-	SPDR = 0;
-	while (!(SPSR & (1<<SPIF)));
-	read = SPDR;
-	buf_inputs = switch_bits_03(read);
-
-	SPDR = _outputs & 0xFF;
-	while (!(SPSR & (1<<SPIF)));
-	read = SPDR;
-	buf_inputs |= switch_bits_03(read) << 8;
-
-	SPDR = _outputs >> 8;
-	while (!(SPSR & (1<<SPIF)));
-	read = ~SPDR;
-
-	// Address is connected to shift's input almost randomly... :(
-	_address = ((read & 0xF0) >> 2) | ((read & 0x8) >> 3) | ((read & 0x4) >> 1)
-		| ((read & 0x2) << 5) | ((read & 0x1) << 7);
-
-	// Output set
-	PORTD |= (1 << PIN_OUTPUT_SET);
-	__asm__("nop");
-	__asm__("nop");
-	PORTD &= ~(1 << PIN_OUTPUT_SET);
-
-	PORTD &= ~(1 << PIN_INPUT_SHIFT);
-
-	_inputs = buf_inputs;
+void out_set(uint32_t state) {
+	outputs_state = state;
+	_out_spi_send();
 }
 
-void io_shift_load() {
-	PORTD &= ~(1 << PIN_INPUT_SHIFT);
-	__asm__("nop");
-	__asm__("nop");
-	PORTD |= (1 << PIN_INPUT_SHIFT); // disable loading now, data stays loaded in shifts
-}*/
+void _spi_send_byte(uint8_t byte) {
+	SPDR0 = byte;
+	while (!(SPSR0 & (1<<SPIF)));
+}
 
+void _out_spi_send(void) {
+	// Typical time of this function: ?? us
+	uint32_t state = outputs_state;
 
-void io_set_output_raw(uint8_t onum, bool state);
-void io_set_outputs_raw(uint16_t state);
-void io_set_outputs_raw_mask(uint16_t state, uint16_t mask);
-uint16_t io_get_outputs_raw(void);
+	// need to send 2 outputs in one iteration, because each output is 12 bits
+	for (size_t outi = 0; outi < NO_OUTPUTS; outi += 2) {
+		_spi_send_byte((state&1) ? config_pwm[outi] : 0);
+		_spi_send_byte(0); // TODO better
+		_spi_send_byte((state&2) ? config_pwm[outi+1] : 0);
+		state >>= 2;
+	}
+}
 
-bool io_get_output_raw(uint8_t onum);
