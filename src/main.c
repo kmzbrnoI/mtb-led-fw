@@ -10,7 +10,7 @@
 
 #include "common.h"
 #include "io.h"
-#include "inputs.h"
+#include "btn.h"
 #include "tlc5940.h"
 #include "config.h"
 #include "diag.h"

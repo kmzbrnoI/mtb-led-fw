@@ -1,5 +1,5 @@
-#ifndef _INPUTS_H_
-#define _INPUTS_H_
+#ifndef _BTN_H_
+#define _BTN_H_
 
 /* Button input debouncing.
  */

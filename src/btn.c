@@ -1,5 +1,5 @@
 #include <stddef.h>
-#include "inputs.h"
+#include "btn.h"
 #include "io.h"
 
 volatile bool btn_pressed = false;
