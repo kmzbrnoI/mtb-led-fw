@@ -1,13 +1,13 @@
 #include <util/delay.h>
 #include <stdbool.h>
 #include <string.h>
-#include "outputs.h"
+#include "tlc5940.h"
 #include "io.h"
 #include "config.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
-uint32_t outputs_state = 0;
+uint32_t tlc_outputs_state = 0;
 const uint8_t OUTPUT_MAP[NO_OUTPUTS] = {
 	 7,  6,  5,  4,  3,  2,  1,  0,
 	31, 30, 29, 28, 27, 26, 25, 24,
@@ -23,7 +23,7 @@ static inline void _xlat_disable(void);
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void out_init(uint32_t state) {
+void tlc_init(uint32_t out_state) {
 	// Setup pins
 	DDRD |= (1 << PIN_GSCLK);
 	PORTD |= (1 << PIN_GSCLK); // PORT must be active for CTC mode output, see datasheet p. 166
@@ -48,7 +48,7 @@ void out_init(uint32_t state) {
 	SPSR0 = (1 << SPI2X);
 	SPCR0 = (1 << SPE) | (1 << MSTR); // enable SPI, master mode, frequency=f_osc/2
 
-	out_set(state);
+	tlc_out_set(out_state);
 
 	PORTB |= (1 << PIN_BLANK) | (1 << PIN_XLAT); // start with BLANK&XLAT high
 	TCCR1B |= (1 << CS10); // start timer, no prescaler
@@ -56,8 +56,8 @@ void out_init(uint32_t state) {
 	PORTB &= ~(1 << PIN_XLAT); // when _xlat_disable caller, signal must go to LOW
 }
 
-void out_set(uint32_t state) {
-	outputs_state = state;
+void tlc_out_set(uint32_t state) {
+	tlc_outputs_state = state;
 	_xlat_disable(); // do not propagate to GS register during SPI shift
 	_out_spi_send();
 	_xlat_enable(); // propagate to GS register on next proper cycle
@@ -71,7 +71,7 @@ void _out_spi_send(void) {
 	memset(buf, 0, sizeof(buf));
 
 	// need to process 2 outputs in one iteration, because each output is 12 bits
-	uint32_t _outputs = (outputs_state << 24) | (outputs_state >> 8);
+	uint32_t _outputs = (tlc_outputs_state << 24) | (tlc_outputs_state >> 8);
 	uint8_t bufi = 0;
 	for (uint8_t i = 0; i < NO_OUTPUTS; i += 2) {
 		if (_outputs&0x80000000) {

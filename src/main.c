@@ -11,7 +11,7 @@
 #include "common.h"
 #include "io.h"
 #include "inputs.h"
-#include "outputs.h"
+#include "tlc5940.h"
 #include "config.h"
 #include "diag.h"
 #include "mtbbus.h"
@@ -178,7 +178,7 @@ void init(void) {
 
 	config_load();
 
-	out_init(0x100); // TODO use config_safe_state
+	tlc_init(0x100); // TODO use config_safe_state
 
 	mtbbus_init(config_mtbbus_addr, config_mtbbus_speed);
 	mtbbus_on_receive = mtbbus_received;
@@ -283,7 +283,7 @@ void btn_on_depressed(void) {
 }
 
 void btn_short_press(void) {
-	out_set(outputs_state << 1);
+	tlc_out_set(tlc_outputs_state << 1);
 
 	if (mtbbus_auto_speed_in_progress) {
 		autodetect_mtbbus_speed_stop();
