@@ -27,6 +27,7 @@ void tlc_init(uint32_t out_state) {
 	// Setup pins
 	DDRD |= (1 << PIN_GSCLK);
 	PORTD |= (1 << PIN_GSCLK); // PORT must be active for CTC mode output, see datasheet p. 166
+	PORTB |= (1 << PIN_BLANK) | (1 << PIN_XLAT); // start with BLANK&XLAT high
 	DDRB |= (1 << PIN_BLANK) | (1 << PIN_XLAT);
 	DDRC |= (1 << PIN_VPRG) | (1 << PIN_DCPRG);
 	io_vprg_off();
@@ -50,7 +51,6 @@ void tlc_init(uint32_t out_state) {
 
 	tlc_out_set(out_state);
 
-	PORTB |= (1 << PIN_BLANK) | (1 << PIN_XLAT); // start with BLANK&XLAT high
 	TCCR1B |= (1 << CS10); // start timer, no prescaler
 	TCCR4B |= (1 << CS40); // start timer, no prescaler
 	PORTB &= ~(1 << PIN_XLAT); // when _xlat_disable caller, signal must go to LOW
