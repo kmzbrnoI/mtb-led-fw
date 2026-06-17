@@ -24,6 +24,7 @@ int main();
 static inline void init(void);
 void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_t data_len); // intentionally not static
 static void mtbbus_send_ack(void);
+static void mtbbus_send_inputs(uint8_t message_code);
 static void mtbbus_send_error(uint8_t code);
 static inline void leds_update(void);
 void goto_bootloader(void); // intentionally not static
@@ -325,15 +326,28 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 
 	case MTBBUS_CMD_MOSI_MODULE_INQUIRY:
 		if ((!broadcast) && (data_len >= 1)) {
+			static bool last_input_changed = false;
 			static bool last_diag_changed = false;
+			static bool first_scan = true;
+			static uint32_t tlc_connected_old = 0;
 			bool last_ok = data[0] & 0x01;
 
-			if ((mtbbus_warn_flags.all != mtbbus_warn_flags_old.all) || (last_diag_changed && !last_ok)) {
-				last_diag_changed = true;
-				mtbbus_warn_flags_old = mtbbus_warn_flags;
-				send_diag_value(MTBBUS_DV_STATE);
+			if ((tlc_outputs_connected != tlc_connected_old) || (last_input_changed && !last_ok) || (first_scan)) {
+				// Send inputs changed
+				last_input_changed = true;
+				first_scan = false;
+				mtbbus_send_inputs(MTBBUS_CMD_MISO_INPUT_CHANGED);
+				tlc_connected_old = tlc_outputs_connected;
 			} else {
-				mtbbus_send_ack();
+				last_input_changed = false;
+
+				if ((mtbbus_warn_flags.all != mtbbus_warn_flags_old.all) || (last_diag_changed && !last_ok)) {
+					last_diag_changed = true;
+					mtbbus_warn_flags_old = mtbbus_warn_flags;
+					send_diag_value(MTBBUS_DV_STATE);
+				} else {
+					mtbbus_send_ack();
+				}
 			}
 		} else { goto INVALID_MSG; }
 		break;
@@ -379,6 +393,12 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 			beacon = data[0];
 			if (!broadcast)
 				mtbbus_send_ack();
+		} else { goto INVALID_MSG; }
+		break;
+
+	case MTBBUS_CMD_MOSI_GET_INPUT:
+		if (!broadcast) {
+			mtbbus_send_inputs(MTBBUS_CMD_MISO_INPUT_STATE);
 		} else { goto INVALID_MSG; }
 		break;
 
@@ -455,6 +475,16 @@ INVALID_MSG:
 void mtbbus_send_ack(void) {
 	mtbbus_output_buf[0] = 1;
 	mtbbus_output_buf[1] = MTBBUS_CMD_MISO_ACK;
+	mtbbus_send_buf_autolen();
+}
+
+void mtbbus_send_inputs(uint8_t message_code) {
+	mtbbus_output_buf[0] = 5;
+	mtbbus_output_buf[1] = message_code;
+	mtbbus_output_buf[2] = (tlc_outputs_connected >> 24) & 0xFF;
+	mtbbus_output_buf[3] = (tlc_outputs_connected >> 16) & 0xFF;
+	mtbbus_output_buf[4] = (tlc_outputs_connected >> 8) & 0xFF;
+	mtbbus_output_buf[5] = tlc_outputs_connected & 0xFF;
 	mtbbus_send_buf_autolen();
 }
 

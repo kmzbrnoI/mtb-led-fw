@@ -8,6 +8,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 uint32_t tlc_outputs_state = 0;
+uint32_t tlc_outputs_connected = 0;
+
 const uint8_t OUTPUT_MAP[NO_OUTPUTS] = {
 	 7,  6,  5,  4,  3,  2,  1,  0,
 	31, 30, 29, 28, 27, 26, 25, 24,
