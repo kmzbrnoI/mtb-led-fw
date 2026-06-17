@@ -21,8 +21,9 @@ extern mcusr_t mcusr;
 
 typedef union {
 	struct {
-		bool addr_zero : 1;
+		bool _UNUSED : 1; // was 'addr_zero'
 		bool bad_mtbbus_polarity : 1;
+		bool tlc_tef; // TLC5940 thermal error flag
 	} bits;
 	uint8_t all;
 } error_flags_t;
