@@ -410,7 +410,9 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 	case MTBBUS_CMD_MOSI_RESET_OUTPUTS:
 		if (!broadcast)
 			mtbbus_send_ack();
-		tlc_out_set(0);
+		uint32_t state = ((uint32_t)config_safe_state[3] << 24) | ((uint32_t)config_safe_state[2] << 16) \
+			| ((uint32_t)config_safe_state[1] << 8) | config_safe_state[0];
+		tlc_out_set(state);
 		break;
 
 	case MTBBUS_CMD_MOSI_CHANGE_ADDR:
