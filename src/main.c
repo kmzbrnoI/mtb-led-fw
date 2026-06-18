@@ -179,7 +179,9 @@ void init(void) {
 
 	config_load();
 
-	tlc_init(0x100); // TODO use config_safe_state
+	uint32_t state = ((uint32_t)config_safe_state[3] << 24) | ((uint32_t)config_safe_state[2] << 16) \
+		| ((uint32_t)config_safe_state[1] << 8) | config_safe_state[0];
+	tlc_init(state);
 
 	mtbbus_init(config_mtbbus_addr, config_mtbbus_speed);
 	mtbbus_on_receive = mtbbus_received;
@@ -284,8 +286,6 @@ void btn_on_depressed(void) {
 }
 
 void btn_short_press(void) {
-	tlc_out_set(tlc_outputs_state << 1);
-
 	if (mtbbus_auto_speed_in_progress) {
 		autodetect_mtbbus_speed_stop();
 		return;
@@ -409,16 +409,16 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 			memcpy((uint8_t*)mtbbus_output_buf+2, data, data_len);
 			mtbbus_send_buf_autolen();
 
-			// TODO
-			//outputs_set_zipped(data, data_len);
-			//outputs_changed_when_setting_scom = true;
+			uint32_t state = ((uint32_t)mtbbus_output_buf[5] << 24) | ((uint32_t)mtbbus_output_buf[4] << 16) \
+				| ((uint32_t)mtbbus_output_buf[3] << 8) | mtbbus_output_buf[2];
+			tlc_out_set(state);
 		} else { goto INVALID_MSG; }
 		break;
 
 	case MTBBUS_CMD_MOSI_RESET_OUTPUTS:
 		if (!broadcast)
 			mtbbus_send_ack();
-		// outputs_set_full(config_safe_state); // TODO
+		tlc_out_set(0);
 		break;
 
 	case MTBBUS_CMD_MOSI_CHANGE_ADDR:
@@ -481,10 +481,10 @@ void mtbbus_send_ack(void) {
 void mtbbus_send_inputs(uint8_t message_code) {
 	mtbbus_output_buf[0] = 5;
 	mtbbus_output_buf[1] = message_code;
-	mtbbus_output_buf[2] = (tlc_outputs_connected >> 24) & 0xFF;
-	mtbbus_output_buf[3] = (tlc_outputs_connected >> 16) & 0xFF;
-	mtbbus_output_buf[4] = (tlc_outputs_connected >> 8) & 0xFF;
-	mtbbus_output_buf[5] = tlc_outputs_connected & 0xFF;
+	mtbbus_output_buf[2] = tlc_outputs_connected & 0xFF;
+	mtbbus_output_buf[3] = (tlc_outputs_connected >> 8) & 0xFF;
+	mtbbus_output_buf[4] = (tlc_outputs_connected >> 16) & 0xFF;
+	mtbbus_output_buf[5] = (tlc_outputs_connected >> 24) & 0xFF;
 	mtbbus_send_buf_autolen();
 }
 
