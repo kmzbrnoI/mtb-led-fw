@@ -108,15 +108,6 @@ int main() {
 				config_write = false;
 		}
 
-		/*if (!ir_shift_disable) {
-			io_shift_update();
-			outputs_enable();
-			if (on_shift_scanned != NULL) {
-				on_shift_scanned();
-				on_shift_scanned = NULL;
-			}
-		}*/
-
 		if (btn_press_time == BTN_PRESS_1S) {
 			btn_press_time = 0xFF;
 			btn_long_press();
@@ -375,6 +366,7 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 			memcpy(config_pwm, data+sizeof(config_safe_state), sizeof(config_pwm));
 			config_write = true;
 			mtbbus_send_ack();
+			tlc_out_set(tlc_outputs_state);
 		} else { goto INVALID_MSG; }
 		break;
 
