@@ -40,7 +40,7 @@ void tlc_init(uint32_t out_state) {
 	TCCR1B = (1 << WGM13); // Phase/freq correct PWM, ICR1 top
 	OCR1A = 1; // duty factor on OC1A, XLAT is inside BLANK
 	OCR1B = 2; // duty factor on BLANK (larger than OCR1A (XLAT))
-	ICR1 = 8192;
+	ICR1 = 4096;
 
 	// Setup timer 4 @ ~1.054 MHz (GSCLK pin)
 	TCCR4A = (1 << COM4B0); // OC4B toggles output pin PD2
