@@ -126,12 +126,7 @@ void init(void) {
 	WDTCSR = 0x00;
 
 	// Check reset flags
-
-	uint16_t bootloader_version = config_bootloader_version();
-	if ((bootloader_version >= 0x0102) && (bootloader_version != 0xFFFF))
-		mcusr.all = config_mcusr();
-	else
-		mcusr.all = MCUSR;
+	mcusr.all = config_mcusr();
 	MCUSR = 0;
 
 	if (config_is_int_wdrf()) {
