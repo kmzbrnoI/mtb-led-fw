@@ -360,10 +360,14 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 
 	case MTBBUS_CMD_MOSI_SET_CONFIG:
 		if ((data_len >= CONFIG_SIZE) && (!broadcast)) {
+			mtbbus_send_ack();
+
 			memcpy(&config_safe_state, data, sizeof(config_safe_state));
 			memcpy(config_pwm, data+sizeof(config_safe_state), sizeof(config_pwm));
+			for (uint8_t i = 0; i < sizeof(config_pwm); i++)
+				if (config_pwm[i] == 0)
+					config_pwm[i] = 1;
 			config_write = true;
-			mtbbus_send_ack();
 			tlc_out_set(tlc_outputs_state);
 		} else { goto INVALID_MSG; }
 		break;
