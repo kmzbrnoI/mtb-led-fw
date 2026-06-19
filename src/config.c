@@ -63,7 +63,7 @@ bool config_save(void) {
 
 	for (uint8_t i = 0; i < sizeof(config_safe_state); i++) {
 		if (!eeprom_is_ready()) return false;
-		eeprom_update_byte((uint8_t*)EEPROM_ADDR_SAFE_STATE+i, *(&config_safe_state+i));
+		eeprom_update_byte((uint8_t*)EEPROM_ADDR_SAFE_STATE+i, *((uint8_t*)&config_safe_state+i));
 	}
 
 	for (uint8_t i = 0; i < sizeof(config_pwm); i++) {
