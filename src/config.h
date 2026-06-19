@@ -15,7 +15,7 @@ extern bool config_write; // request to write config to EEPROM
 ///////////////////////////////////////////////////////////////////////////////
 // Configuration variables
 
-extern uint8_t config_safe_state[NO_OUTPUTS/8];
+extern uint32_t config_safe_state;
 extern uint8_t config_pwm[NO_OUTPUTS];
 extern uint8_t config_mtbbus_addr;
 extern uint8_t config_mtbbus_speed;

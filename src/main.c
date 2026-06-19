@@ -170,9 +170,7 @@ void init(void) {
 
 	config_load();
 
-	uint32_t state = ((uint32_t)config_safe_state[3] << 24) | ((uint32_t)config_safe_state[2] << 16) \
-		| ((uint32_t)config_safe_state[1] << 8) | config_safe_state[0];
-	tlc_init(state);
+	tlc_init(config_safe_state);
 
 	mtbbus_init(config_mtbbus_addr, config_mtbbus_speed);
 	mtbbus_on_receive = mtbbus_received;
@@ -362,7 +360,7 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 
 	case MTBBUS_CMD_MOSI_SET_CONFIG:
 		if ((data_len >= CONFIG_SIZE) && (!broadcast)) {
-			memcpy(config_safe_state, data, sizeof(config_safe_state));
+			memcpy(&config_safe_state, data, sizeof(config_safe_state));
 			memcpy(config_pwm, data+sizeof(config_safe_state), sizeof(config_pwm));
 			config_write = true;
 			mtbbus_send_ack();
@@ -374,7 +372,7 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		if (!broadcast) {
 			mtbbus_output_buf[0] = CONFIG_SIZE+2;
 			mtbbus_output_buf[1] = MTBBUS_CMD_MISO_MODULE_CONFIG;
-			memcpy((uint8_t*)mtbbus_output_buf+2, config_safe_state, sizeof(config_safe_state));
+			memcpy((uint8_t*)mtbbus_output_buf+2, &config_safe_state, sizeof(config_safe_state));
 			memcpy((uint8_t*)mtbbus_output_buf+2+sizeof(config_safe_state), config_pwm, sizeof(config_pwm));
 			mtbbus_send_buf_autolen();
 		} else { goto INVALID_MSG; }
@@ -401,8 +399,8 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 			memcpy((uint8_t*)mtbbus_output_buf+2, data, data_len);
 			mtbbus_send_buf_autolen();
 
-			uint32_t state = ((uint32_t)mtbbus_output_buf[5] << 24) | ((uint32_t)mtbbus_output_buf[4] << 16) \
-				| ((uint32_t)mtbbus_output_buf[3] << 8) | mtbbus_output_buf[2];
+			uint32_t state;
+			memcpy(&state, (void*)(mtbbus_output_buf+2), sizeof(state));
 			tlc_out_set(state);
 		} else { goto INVALID_MSG; }
 		break;
@@ -410,9 +408,7 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 	case MTBBUS_CMD_MOSI_RESET_OUTPUTS:
 		if (!broadcast)
 			mtbbus_send_ack();
-		uint32_t state = ((uint32_t)config_safe_state[3] << 24) | ((uint32_t)config_safe_state[2] << 16) \
-			| ((uint32_t)config_safe_state[1] << 8) | config_safe_state[0];
-		tlc_out_set(state);
+		tlc_out_set(config_safe_state);
 		break;
 
 	case MTBBUS_CMD_MOSI_CHANGE_ADDR:
