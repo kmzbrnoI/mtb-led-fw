@@ -4,6 +4,7 @@
 #include "tlc5940.h"
 #include "io.h"
 #include "config.h"
+#include "diag.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -66,34 +67,52 @@ void tlc_out_set(uint32_t state) {
 }
 
 void _out_spi_send(void) {
-	// Typical time of this function: 150 us
-	SPDR0 = 0; // so first while does not loop
+	// This function should be as-fast-as-possible because it sends data to all 32 outputs
+	// in one blocking call.
+	// Typical duration of this function: 150 us.
 
-	uint8_t buf[48]; // NO_OUTPUTS * 1.5 (each output is 12 bits)
-	memset(buf, 0, sizeof(buf));
+	SPDR0 = 0; // so first while does not loop infinitely
+
+	// ----------- Prepare SPI out data -----------
+	uint8_t buf_out[48]; // NO_OUTPUTS * 1.5 (each output is 12 bits)
+	memset(buf_out, 0, sizeof(buf_out));
 
 	// need to process 2 outputs in one iteration, because each output is 12 bits
 	uint32_t _outputs = (tlc_outputs_state << 24) | (tlc_outputs_state >> 8);
 	uint8_t bufi = 0;
 	for (uint8_t i = 0; i < NO_OUTPUTS; i += 2) {
 		if (_outputs&0x80000000) {
-			buf[bufi] = config_pwm[OUTPUT_MAP[i]];
+			buf_out[bufi] = config_pwm[OUTPUT_MAP[i]];
 		}
 		if (_outputs&0x40000000) {
 			const uint8_t pwm = config_pwm[OUTPUT_MAP[i+1]];
-			buf[bufi+1] = pwm >> 4;
-			buf[bufi+2] = pwm << 4;
+			buf_out[bufi+1] = pwm >> 4;
+			buf_out[bufi+2] = pwm << 4;
 		}
 		_outputs <<= 2;
 		bufi += 3;
 	}
 
-	for (uint8_t i = 0; i < sizeof(buf); i++) {
+
+	// ----------- Perform SPI operation -----------
+	uint8_t buf_in[sizeof(buf_out)];
+
+	for (uint8_t i = 0; i < sizeof(buf_out); i++) {
 		while (!(SPSR0 & (1<<SPIF)));
-		SPDR0 = buf[i];
+		buf_in[i] = SPDR0;
+		SPDR0 = buf_out[i];
 	}
 
 	while (!(SPSR0 & (1<<SPIF)));
+
+
+	// ----------- Process SPI in data -----------
+	const uint8_t SECOND_TLC_I = sizeof(buf_in)/2;
+	uint32_t outputs_lod;
+	memcpy(&outputs_lod, buf_in, 2);
+	memcpy(((uint8_t*)&outputs_lod)+2, buf_in+SECOND_TLC_I, 2);
+	tlc_outputs_connected = ~outputs_lod;
+	error_flags.bits.tlc_tef = (buf_in[2] != 0) || (buf_in[SECOND_TLC_I+2] != 0);
 }
 
 void _xlat_enable(void) {
