@@ -22,8 +22,8 @@ void io_init() {
 	// Reset (could load from bootloader)
 	io_reset();
 
-	DDRB |= (1 << PIN_LED_GREEN) | (1 << PIN_LED_BLUE);
-	DDRD |= (1 << PIN_LED_RED);
+	DDRB |= (1 << PIN_LED_GREEN);
+	DDRD |= (1 << PIN_LED_RED) | (1 << PIN_LED_BLUE);
 	DDRE |= (1 << PIN_DEBUG1) | (1 << PIN_DEBUG2);
 	PORTD |= (1 << PIN_BUTTON) | (1 << PIN_UART_RX); // pull-ups
 }
