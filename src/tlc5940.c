@@ -32,6 +32,9 @@ void tlc_init(uint32_t out_state) {
 	PORTD |= (1 << PIN_GSCLK); // PORT must be active for CTC mode output, see datasheet p. 166
 	PORTB |= (1 << PIN_BLANK) | (1 << PIN_XLAT); // start with BLANK&XLAT high
 	DDRB |= (1 << PIN_BLANK) | (1 << PIN_XLAT);
+	DDRE |= (1 << PE3) | (1 << PE2); // MOSI1 & SS1 out
+	DDRC |= (1 << PC1); // SCK1 out
+	PORTC |= (1 << PC0); // pull-up on MISO just for sure
 
 	// Setup timer 1 for XLAT & BLANK
 	TCCR1A = (1 << COM1A1) | (1 << COM1B1); // non inverting, Clear OC1A/OC1B on Compare Match when up-counting. Set OC1A/OC1B on Compare Match when down-counting.
@@ -45,9 +48,9 @@ void tlc_init(uint32_t out_state) {
 	TCCR4B = (1 << WGM42); // CTC mode
 	OCR4A = 0; // as-fast-as-possible
 
-	// Setup SPI
-	SPSR0 = (1 << SPI2X);
-	SPCR0 = (1 << SPE) | (1 << MSTR); // enable SPI, master mode, frequency=f_osc/2
+	// Setup SPI1
+	SPSR1 = (1 << SPI2X1);
+	SPCR1 = (1 << SPE1) | (1 << MSTR1); // enable SPI, master mode, frequency=f_osc/2
 
 	tlc_out_set(out_state);
 
@@ -68,7 +71,7 @@ void _out_spi_send(void) {
 	// in one blocking call.
 	// Typical duration of this function: 150 us.
 
-	SPDR0 = 0; // so first while does not loop infinitely
+	SPDR1 = 0; // so first while does not loop infinitely
 
 	// ----------- Prepare SPI out data -----------
 	uint8_t buf_out[48]; // NO_OUTPUTS * 1.5 (each output is 12 bits)
@@ -95,12 +98,12 @@ void _out_spi_send(void) {
 	uint8_t buf_in[sizeof(buf_out)];
 
 	for (uint8_t i = 0; i < sizeof(buf_out); i++) {
-		while (!(SPSR0 & (1<<SPIF)));
-		buf_in[i] = SPDR0;
-		SPDR0 = buf_out[i];
+		while (!(SPSR1 & (1<<SPIF1)));
+		buf_in[i] = SPDR1;
+		SPDR1 = buf_out[i];
 	}
 
-	while (!(SPSR0 & (1<<SPIF)));
+	while (!(SPSR1 & (1<<SPIF1)));
 
 
 	// ----------- Process SPI in data -----------

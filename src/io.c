@@ -26,8 +26,5 @@ void io_init() {
 	DDRD |= (1 << PIN_LED_RED);
 	DDRE |= (1 << PIN_DEBUG1) | (1 << PIN_DEBUG2);
 	PORTD |= (1 << PIN_BUTTON) | (1 << PIN_UART_RX); // pull-ups
-
-	DDRB |= (1 << PB3) | (1 << PB5) | (1 << PB2); // MOSI & SCK & SS out
-	PORTB |= (1 << PB4); // pull-up on MISO just for sure
 }
 
