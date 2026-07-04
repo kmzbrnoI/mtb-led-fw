@@ -23,7 +23,7 @@
 #define PIN_UART_TX PD1
 #define PIN_UART_DIR PD3
 
-#define PIN_XLAT PB1 // OC1A used
+#define PIN_XLAT PB1
 #define PIN_BLANK PB2 // OC1B used
 #define PIN_GSCLK PD2
 
@@ -89,5 +89,11 @@ static inline void io_debug2_toggle(void) { io_debug2_set(!io_debug2_get()); }
 
 static inline void uart_out(void) { PORTD |= (1 << PIN_UART_DIR); }
 static inline void uart_in(void) { PORTD &= ~(1 << PIN_UART_DIR); }
+
+static inline void io_xlat_on(void) { PORTB |= (1 << PIN_XLAT); }
+static inline void io_xlat_off(void) { PORTB &= ~(1 << PIN_XLAT); }
+
+static inline void io_blank_on(void) { PORTB |= (1 << PIN_BLANK); }
+static inline void io_blank_off(void) { PORTB &= ~(1 << PIN_BLANK); }
 
 #endif

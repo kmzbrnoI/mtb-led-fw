@@ -1,3 +1,4 @@
+#include <avr/cpufunc.h>
 #include <util/delay.h>
 #include <stdbool.h>
 #include <string.h>
@@ -10,6 +11,7 @@
 
 uint32_t tlc_outputs_state = 0;
 uint32_t tlc_outputs_connected = 0;
+bool tlc_sample_request = false;
 
 const uint8_t OUTPUT_MAP[NO_OUTPUTS] = {
 	 7,  6,  5,  4,  3,  2,  1,  0,
@@ -21,8 +23,8 @@ const uint8_t OUTPUT_MAP[NO_OUTPUTS] = {
 ///////////////////////////////////////////////////////////////////////////////
 
 static void _out_spi_send(void);
-static inline void _xlat_enable(void);
-static inline void _xlat_disable(void);
+static inline void _blank_enable(void);
+static inline void _blank_disable(void);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -37,10 +39,9 @@ void tlc_init(uint32_t out_state) {
 	PORTC |= (1 << PC0); // pull-up on MISO just for sure
 
 	// Setup timer 1 for XLAT & BLANK
-	TCCR1A = (1 << COM1A1) | (1 << COM1B1); // non inverting, Clear OC1A/OC1B on Compare Match when up-counting. Set OC1A/OC1B on Compare Match when down-counting.
+	TCCR1A = (1 << COM1B1); // non inverting, Clear OC1A/OC1B on Compare Match when up-counting. Set OC1A/OC1B on Compare Match when down-counting.
 	TCCR1B = (1 << WGM13); // Phase/freq correct PWM, ICR1 top
-	OCR1A = 1; // duty factor on OC1A, XLAT is inside BLANK
-	OCR1B = 2; // duty factor on BLANK (larger than OCR1A (XLAT))
+	OCR1B = 2; // duty factor on BLANK
 	ICR1 = 4096;
 
 	// Setup timer 4 @ ~1.054 MHz (GSCLK pin)
@@ -54,16 +55,16 @@ void tlc_init(uint32_t out_state) {
 
 	tlc_out_set(out_state);
 
-	TCCR1B |= (1 << CS10); // start timer, no prescaler
 	TCCR4B |= (1 << CS40); // start timer, no prescaler
-	PORTB &= ~(1 << PIN_XLAT); // when _xlat_disable caller, signal must go to LOW
 }
 
 void tlc_out_set(uint32_t state) {
 	tlc_outputs_state = state;
-	_xlat_disable(); // do not propagate to GS register during SPI shift
 	_out_spi_send();
-	_xlat_enable(); // propagate to GS register on next proper cycle
+	_blank_disable();
+	io_blank_on();
+	io_xlat_on();
+	tlc_sample_request = true;
 }
 
 void _out_spi_send(void) {
@@ -91,32 +92,46 @@ void _out_spi_send(void) {
 		bufi += 3;
 	}
 
-
 	// ----------- Perform SPI operation -----------
-	uint8_t buf_in[sizeof(buf_out)];
-
 	SPDR1 = buf_out[0];
 	for (uint8_t i = 1; i < sizeof(buf_out); i++) {
 		while (!(SPSR1 & (1<<SPIF1)));
-		buf_in[i-1] = SPDR1;
 		SPDR1 = buf_out[i];
 	}
 	while (!(SPSR1 & (1<<SPIF1)));
+}
 
+void tlc_sample_status(void) {
+	io_xlat_off();
+	_blank_enable();
+	_delay_us(2); // according to tlc5940 datasheet
+
+	// ----------- Perform SPI operation -----------
+	SPCR1 |= (1 << CPHA1);
+	uint8_t buf_in[48];
+	SPDR1 = 0;
+	for (uint8_t i = 0; i < sizeof(buf_in); i++) {
+		while (!(SPSR1 & (1<<SPIF1)));
+		buf_in[i] = SPDR1;
+		SPDR1 = 0;
+	}
+	while (!(SPSR1 & (1<<SPIF1)));
+	SPCR1 &= ~(1 << CPHA1);
 
 	// ----------- Process SPI in data -----------
 	const uint8_t SECOND_TLC_I = sizeof(buf_in)/2;
-	uint32_t outputs_lod;
-	memcpy(&outputs_lod, buf_in, 2);
-	memcpy(((uint8_t*)&outputs_lod)+2, buf_in+SECOND_TLC_I, 2);
-	tlc_outputs_connected = ~outputs_lod;
+	uint32_t outputs_lod = buf_in[0] | ((uint32_t)buf_in[1] << 24) | ((uint32_t)buf_in[SECOND_TLC_I] << 16) | ((uint32_t)buf_in[SECOND_TLC_I+1] << 8);
+	tlc_outputs_connected = (~outputs_lod) & tlc_outputs_state;
 	error_flags.bits.tlc_tef = (buf_in[2] != 0) || (buf_in[SECOND_TLC_I+2] != 0);
 }
 
-void _xlat_enable(void) {
-	TCCR1A |= (1 << COM1A1);
+void _blank_enable(void) {
+	TCCR1A |= (1 << COM1B1);
+	TCNT1 = 0;
+	TCCR1B |= (1 << CS10); // start timer
 }
 
-void _xlat_disable(void) {
-	TCCR1A &= ~(1 << COM1A1);
+void _blank_disable(void) {
+	TCCR1A &= ~(1 << COM1B1);
+	TCCR1B &= ~(1 << CS10); // stop timer
 }

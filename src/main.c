@@ -115,6 +115,11 @@ int main() {
 			on_initialized();
 		}
 
+		if (tlc_sample_request) {
+			tlc_sample_request = false;
+			tlc_sample_status();
+		}
+
 		wdt_reset();
 	}
 }
