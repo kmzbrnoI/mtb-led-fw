@@ -23,11 +23,8 @@
 #define PIN_UART_TX PD1
 #define PIN_UART_DIR PD3
 
-#define PIN_VPRG PC1
-#define PIN_DCPRG PC2
 #define PIN_XLAT PB1 // OC1A used
 #define PIN_BLANK PB2 // OC1B used
-#define PIN_XERR PC5
 #define PIN_GSCLK PD2
 
 void io_init(void);
@@ -92,11 +89,5 @@ static inline void io_debug2_toggle(void) { io_debug2_set(!io_debug2_get()); }
 
 static inline void uart_out(void) { PORTD |= (1 << PIN_UART_DIR); }
 static inline void uart_in(void) { PORTD &= ~(1 << PIN_UART_DIR); }
-
-static inline void io_vprg_on(void) { PORTC |= (1 << PIN_VPRG); }
-static inline void io_vprg_off(void) { PORTC &= ~(1 << PIN_VPRG); }
-
-static inline void io_dcprg_on(void) { PORTC |= (1 << PIN_DCPRG); }
-static inline void io_dcprg_off(void) { PORTC &= ~(1 << PIN_DCPRG); }
 
 #endif

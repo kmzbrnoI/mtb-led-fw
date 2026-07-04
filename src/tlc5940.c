@@ -32,9 +32,6 @@ void tlc_init(uint32_t out_state) {
 	PORTD |= (1 << PIN_GSCLK); // PORT must be active for CTC mode output, see datasheet p. 166
 	PORTB |= (1 << PIN_BLANK) | (1 << PIN_XLAT); // start with BLANK&XLAT high
 	DDRB |= (1 << PIN_BLANK) | (1 << PIN_XLAT);
-	DDRC |= (1 << PIN_VPRG) | (1 << PIN_DCPRG);
-	io_vprg_off();
-	io_dcprg_off();
 
 	// Setup timer 1 for XLAT & BLANK
 	TCCR1A = (1 << COM1A1) | (1 << COM1B1); // non inverting, Clear OC1A/OC1B on Compare Match when up-counting. Set OC1A/OC1B on Compare Match when down-counting.
