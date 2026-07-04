@@ -71,8 +71,6 @@ void _out_spi_send(void) {
 	// in one blocking call.
 	// Typical duration of this function: 150 us.
 
-	SPDR1 = 0; // so first while does not loop infinitely
-
 	// ----------- Prepare SPI out data -----------
 	uint8_t buf_out[48]; // NO_OUTPUTS * 1.5 (each output is 12 bits)
 	memset(buf_out, 0, sizeof(buf_out));
@@ -97,12 +95,12 @@ void _out_spi_send(void) {
 	// ----------- Perform SPI operation -----------
 	uint8_t buf_in[sizeof(buf_out)];
 
-	for (uint8_t i = 0; i < sizeof(buf_out); i++) {
+	SPDR1 = buf_out[0];
+	for (uint8_t i = 1; i < sizeof(buf_out); i++) {
 		while (!(SPSR1 & (1<<SPIF1)));
-		buf_in[i] = SPDR1;
+		buf_in[i-1] = SPDR1;
 		SPDR1 = buf_out[i];
 	}
-
 	while (!(SPSR1 & (1<<SPIF1)));
 
 
