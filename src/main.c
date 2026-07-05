@@ -556,20 +556,6 @@ void send_diag_value(uint8_t i) {
 		mtbbus_output_buf[4] = mtbbus_warn_flags.all >> 8;
 		break;
 
-	case MTBBUS_DV_VMCU:
-		mtbbus_output_buf[0] = 2+2;
-		mtbbus_output_buf[3] = vcc_voltage >> 8;
-		mtbbus_output_buf[4] = vcc_voltage & 0xFF;
-		break;
-
-	case MTBBUS_DV_TEMPMCU:
-		mtbbus_output_buf[0] = 2+4;
-		mtbbus_output_buf[3] = mcu_temperature >> 8;
-		mtbbus_output_buf[4] = mcu_temperature & 0xFF;
-		mtbbus_output_buf[5] = ts_offset;
-		mtbbus_output_buf[6] = ts_gain;
-		break;
-
 	case MTBBUS_DV_MTBBUS_RECEIVED:
 		mtbbus_output_buf[0] = 2+sizeof(mtbbus_diag.received);
 		MEMCPY_FROM_VAR(&mtbbus_output_buf[3], mtbbus_diag.received);
