@@ -157,8 +157,8 @@ void _sample_status(void) {
 	// ----------- Process SPI in data -----------
 	uint32_t outputs_lod = buf_in[0] | ((uint32_t)buf_in[1] << 24) | ((uint32_t)buf_in[SECOND_TLC_I] << 16) | ((uint32_t)buf_in[SECOND_TLC_I+1] << 8);
 	tlc_outputs_connected = (~outputs_lod) & tlc_outputs_state;
-	mtbbus_warn_flags.mtbled.tlc_tef = (buf_in[2] != 0) || (buf_in[SECOND_TLC_I+2] != 0);
-	mtbbus_warn_flags.mtbled.tlc_lod = (tlc_outputs_connected != tlc_outputs_state);
+	mtbbus_warn_flags.bits.tlc_tef = (buf_in[2] != 0) || (buf_in[SECOND_TLC_I+2] != 0);
+	mtbbus_warn_flags.bits.tlc_lod = (tlc_outputs_connected != tlc_outputs_state);
 }
 
 ISR(TIMER1_OVF_vect) {

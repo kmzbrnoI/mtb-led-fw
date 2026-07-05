@@ -179,17 +179,17 @@ void on_initialized(void) {
 ISR(TIMER0_COMPA_vect) {
 	// Timer 0 @ 2 kHz (period 500 us)
 	if (inputs_debounce_to_update) // debouncing was not executed since last call -> emit warning
-		mtbbus_warn_flags.common.missed_timer = true;
+		mtbbus_warn_flags.bits.missed_timer = true;
 	inputs_debounce_to_update = true;
 }
 
 ISR(TIMER3_COMPA_vect) {
 	// Timer 1 @ 100 Hz (period 10 ms)
 	if ((TCNT1H > 0) && (TCNT3H < OCR3AH))
-		mtbbus_warn_flags.common.missed_timer = true;
+		mtbbus_warn_flags.bits.missed_timer = true;
 
 	if (t3_elapsed) // timer 3 was not processed since last interrupt -> emit warning
-		mtbbus_warn_flags.common.missed_timer = true;
+		mtbbus_warn_flags.bits.missed_timer = true;
 	t3_elapsed = true;
 
 	if (_init_counter < INIT_TIME)

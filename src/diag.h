@@ -39,11 +39,9 @@ typedef union {
 		bool missed_timer : 1;
 		bool vcc_oscilating : 1;
 		uint8_t __ : 2; // padding
-	} common;
-	struct {
 		bool tlc_tef : 1; // TLC5940 thermal error flag
 		bool tlc_lod : 1; // TLC5940 LED open flag
-	} mtbled;
+	} bits;
 	uint16_t all;
 } mtbbus_warn_flags_t;
 
