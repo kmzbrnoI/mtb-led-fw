@@ -42,6 +42,7 @@ typedef union {
 	} common;
 	struct {
 		bool tlc_tef : 1; // TLC5940 thermal error flag
+		bool tlc_lod : 1; // TLC5940 LED open flag
 	} mtbled;
 	uint16_t all;
 } mtbbus_warn_flags_t;
