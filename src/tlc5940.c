@@ -15,6 +15,7 @@
 uint32_t tlc_outputs_state = 0;
 uint32_t tlc_outputs_connected = 0;
 uint8_t _buf_out[TLC_OUT_BUF_SIZE];
+volatile bool tlc_update_request;
 
 const uint8_t _OUTPUT_MAP[NO_OUTPUTS] = {
 	 7,  6,  5,  4,  3,  2,  1,  0,
@@ -31,7 +32,7 @@ volatile struct {
 ///////////////////////////////////////////////////////////////////////////////
 
 static void _out_spi_send(void);
-static void _prepare_out_data(void);
+static void _prepare_out_data(uint32_t state);
 void _sample_status(void);
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -80,24 +81,26 @@ void tlc_update(void) {
 	if (_flags.send_request) {
 		_flags.send_request = false;
 		_out_spi_send();
-	}
-	else if (_flags.sample_request) {
+	} else if (_flags.sample_request) {
 		_flags.sample_request = false;
 		_sample_status();
+	} else if (tlc_update_request) {
+		tlc_update_request = false;
+		tlc_out_set(tlc_outputs_state);
 	}
 }
 
 void tlc_out_set(uint32_t state) {
 	tlc_outputs_state = state;
-	_prepare_out_data();
+	_prepare_out_data(state);
 	_flags.send_request = true;
 }
 
-void _prepare_out_data(void) {
+void _prepare_out_data(uint32_t state) {
 	memset(_buf_out, 0, sizeof(_buf_out));
 
 	// need to process 2 outputs in one iteration, because each output is 12 bits
-	uint32_t _outputs = (tlc_outputs_state << 24) | (tlc_outputs_state >> 8);
+	uint32_t _outputs = (state << 24) | (state >> 8);
 	uint8_t bufi = 0;
 	for (uint8_t i = 0; i < NO_OUTPUTS; i += 2) {
 		if (_outputs&0x80000000) {

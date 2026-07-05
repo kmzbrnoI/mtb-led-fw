@@ -203,6 +203,13 @@ ISR(TIMER3_COMPA_vect) {
 
 	if (diag_timer < DIAG_UPDATE_PERIOD)
 		diag_timer++;
+
+	static uint8_t tlc_update_timer = 0;
+	tlc_update_timer++;
+	if (tlc_update_timer >= 20) { // each 200 ms
+		tlc_update_timer = 0;
+		tlc_update_request = true;
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////

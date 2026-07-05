@@ -11,6 +11,7 @@
 
 extern uint32_t tlc_outputs_state; // read-only variable
 extern uint32_t tlc_outputs_connected; // read-only variable
+extern volatile bool tlc_update_request;
 
 void tlc_init(uint32_t out_state);
 void tlc_out_set(uint32_t state);
