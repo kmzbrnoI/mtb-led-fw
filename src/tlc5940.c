@@ -10,24 +10,35 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#define TLC_OUT_BUF_SIZE 48 // NO_OUTPUTS * 1.5 (each output is 12 bits)
+
 uint32_t tlc_outputs_state = 0;
 uint32_t tlc_outputs_connected = 0;
-volatile bool tlc_sample_request = false;
+uint8_t _buf_out[TLC_OUT_BUF_SIZE];
 
-const uint8_t OUTPUT_MAP[NO_OUTPUTS] = {
+const uint8_t _OUTPUT_MAP[NO_OUTPUTS] = {
 	 7,  6,  5,  4,  3,  2,  1,  0,
 	31, 30, 29, 28, 27, 26, 25, 24,
 	23, 22, 21, 20, 19, 18, 17, 16,
 	15, 14, 13, 12, 11, 10,  9,  8
 };
 
+volatile struct {
+	bool sample_request;
+	bool send_request;
+} _flags;
+
 ///////////////////////////////////////////////////////////////////////////////
 
 static void _out_spi_send(void);
+static void _prepare_out_data(void);
+void _sample_status(void);
 
 ///////////////////////////////////////////////////////////////////////////////
 
 void tlc_init(uint32_t out_state) {
+	memset((void*)&_flags, 0, sizeof(_flags));
+
 	// Setup pins
 	DDRD |= (1 << PIN_GSCLK);
 	PORTD |= (1 << PIN_GSCLK); // PORT must be active for CTC mode output, see datasheet p. 166
@@ -60,12 +71,57 @@ void tlc_init(uint32_t out_state) {
 	io_xlat_off();
 	TCCR1A = (1 << COM1B1); // non inverting, Clear OC1A/OC1B on Compare Match when up-counting. Set OC1A/OC1B on Compare Match when down-counting.
 	TCCR1B |= (1 << CS10); // start timer
-	tlc_sample_request = true;
+	_flags.sample_request = true;
+}
+
+void tlc_update(void) {
+	if (_flags.send_request) {
+		_flags.send_request = false;
+		_out_spi_send();
+	}
+	else if (_flags.sample_request) {
+		_flags.sample_request = false;
+		_sample_status();
+	}
 }
 
 void tlc_out_set(uint32_t state) {
 	tlc_outputs_state = state;
-	_out_spi_send();
+	_prepare_out_data();
+	_flags.send_request = true;
+}
+
+void _prepare_out_data(void) {
+	memset(_buf_out, 0, sizeof(_buf_out));
+
+	// need to process 2 outputs in one iteration, because each output is 12 bits
+	uint32_t _outputs = (tlc_outputs_state << 24) | (tlc_outputs_state >> 8);
+	uint8_t bufi = 0;
+	for (uint8_t i = 0; i < NO_OUTPUTS; i += 2) {
+		if (_outputs&0x80000000) {
+			_buf_out[bufi] = config_pwm[_OUTPUT_MAP[i]];
+		}
+		if (_outputs&0x40000000) {
+			const uint8_t pwm = config_pwm[_OUTPUT_MAP[i+1]];
+			_buf_out[bufi+1] = pwm >> 4;
+			_buf_out[bufi+2] = pwm << 4;
+		}
+		_outputs <<= 2;
+		bufi += 3;
+	}
+}
+
+void _out_spi_send(void) {
+	// This function should be as-fast-as-possible because it sends data to all 32 outputs
+	// in one blocking call.
+	// Typical duration of this function: 100 us.
+
+	SPDR1 = _buf_out[0];
+	for (uint8_t i = 1; i < sizeof(_buf_out); i++) {
+		while (!(SPSR1 & (1<<SPIF1)));
+		SPDR1 = _buf_out[i];
+	}
+	while (!(SPSR1 & (1<<SPIF1)));
 
 	// On next BLANK cycle, trigger also XLAT and trigger TIMER1_OVF_vect interrupt, which triggers reading status information
 	if ((TCCR1B & 0x07) > 0) { // if timer is running
@@ -76,41 +132,8 @@ void tlc_out_set(uint32_t state) {
 	}
 }
 
-void _out_spi_send(void) {
-	// This function should be as-fast-as-possible because it sends data to all 32 outputs
-	// in one blocking call.
-	// Typical duration of this function: 150 us.
-
-	// ----------- Prepare SPI out data -----------
-	uint8_t buf_out[48]; // NO_OUTPUTS * 1.5 (each output is 12 bits)
-	memset(buf_out, 0, sizeof(buf_out));
-
-	// need to process 2 outputs in one iteration, because each output is 12 bits
-	uint32_t _outputs = (tlc_outputs_state << 24) | (tlc_outputs_state >> 8);
-	uint8_t bufi = 0;
-	for (uint8_t i = 0; i < NO_OUTPUTS; i += 2) {
-		if (_outputs&0x80000000) {
-			buf_out[bufi] = config_pwm[OUTPUT_MAP[i]];
-		}
-		if (_outputs&0x40000000) {
-			const uint8_t pwm = config_pwm[OUTPUT_MAP[i+1]];
-			buf_out[bufi+1] = pwm >> 4;
-			buf_out[bufi+2] = pwm << 4;
-		}
-		_outputs <<= 2;
-		bufi += 3;
-	}
-
-	// ----------- Perform SPI operation -----------
-	SPDR1 = buf_out[0];
-	for (uint8_t i = 1; i < sizeof(buf_out); i++) {
-		while (!(SPSR1 & (1<<SPIF1)));
-		SPDR1 = buf_out[i];
-	}
-	while (!(SPSR1 & (1<<SPIF1)));
-}
-
-void tlc_sample_status(void) {
+void _sample_status(void) {
+	// Typical duration of this function: 100 us.
 	// ----------- Perform SPI operation -----------
 	SPCR1 |= (1 << CPHA1);
 	uint8_t buf_in[48];
@@ -133,6 +156,6 @@ void tlc_sample_status(void) {
 ISR(TIMER1_OVF_vect) {
 	TIMSK1 &= ~(1 << TOIE1); // disable XLAT signal
 	TCCR1A &= ~(1 << COM1A1); // disable interrupt
-	tlc_sample_request = true;
+	_flags.sample_request = true;
 }
 

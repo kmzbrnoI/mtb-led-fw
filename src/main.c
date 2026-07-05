@@ -84,6 +84,7 @@ int main() {
 
 	while (true) {
 		mtbbus_update();
+		tlc_update();
 
 		if (t3_elapsed) {
 			t3_elapsed = false;
@@ -113,11 +114,6 @@ int main() {
 		if (_init_counter == INIT_TIME) {
 			_init_counter = 0xFF;
 			on_initialized();
-		}
-
-		if (tlc_sample_request) {
-			tlc_sample_request = false;
-			tlc_sample_status();
 		}
 
 		wdt_reset();
