@@ -23,7 +23,6 @@ typedef union {
 	struct {
 		bool _UNUSED : 1; // was 'addr_zero'
 		bool bad_mtbbus_polarity : 1;
-		bool tlc_tef; // TLC5940 thermal error flag
 	} bits;
 	uint8_t all;
 } error_flags_t;
@@ -39,8 +38,12 @@ typedef union {
 		bool _ : 1;
 		bool missed_timer : 1;
 		bool vcc_oscilating : 1;
-	} bits;
-	uint8_t all;
+		uint8_t __ : 2; // padding
+	} common;
+	struct {
+		bool tlc_tef : 1; // TLC5940 thermal error flag
+	} mtbled;
+	uint16_t all;
 } mtbbus_warn_flags_t;
 
 extern mtbbus_warn_flags_t mtbbus_warn_flags;

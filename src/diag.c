@@ -100,7 +100,7 @@ ISR(ADC_vect) {
 
 		uint16_t diff = vcc_voltage > init_vcc ? vcc_voltage-init_vcc : init_vcc-vcc_voltage;
 		if (diff > VCC_MAX_DIFF)
-			mtbbus_warn_flags.bits.vcc_oscilating = true;
+			mtbbus_warn_flags.common.vcc_oscilating = true;
 		break;
 
 	case DIAG_STEP_TEMP_MEASURE:

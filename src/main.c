@@ -164,7 +164,7 @@ void init(void) {
 
 	diag_init();
 
-	mtbbus_warn_flags_old.all = 0xFF; // causes report of change to PC
+	mtbbus_warn_flags_old.all = 0xFFFF; // causes report of change to PC
 	wdt_enable(WDTO_250MS);
 	sei(); // enable interrupts globally
 }
@@ -179,17 +179,17 @@ void on_initialized(void) {
 ISR(TIMER0_COMPA_vect) {
 	// Timer 0 @ 2 kHz (period 500 us)
 	if (inputs_debounce_to_update) // debouncing was not executed since last call -> emit warning
-		mtbbus_warn_flags.bits.missed_timer = true;
+		mtbbus_warn_flags.common.missed_timer = true;
 	inputs_debounce_to_update = true;
 }
 
 ISR(TIMER3_COMPA_vect) {
 	// Timer 1 @ 100 Hz (period 10 ms)
 	if ((TCNT1H > 0) && (TCNT3H < OCR3AH))
-		mtbbus_warn_flags.bits.missed_timer = true;
+		mtbbus_warn_flags.common.missed_timer = true;
 
 	if (t3_elapsed) // timer 3 was not processed since last interrupt -> emit warning
-		mtbbus_warn_flags.bits.missed_timer = true;
+		mtbbus_warn_flags.common.missed_timer = true;
 	t3_elapsed = true;
 
 	if (_init_counter < INIT_TIME)
@@ -551,8 +551,9 @@ void send_diag_value(uint8_t i) {
 
 	case MTBBUS_DV_WARNINGS:
 		mtbbus_warn_flags_old = mtbbus_warn_flags;
-		mtbbus_output_buf[0] = 2+1;
-		mtbbus_output_buf[3] = mtbbus_warn_flags.all;
+		mtbbus_output_buf[0] = 2+2;
+		mtbbus_output_buf[3] = mtbbus_warn_flags.all & 0xFF;
+		mtbbus_output_buf[4] = mtbbus_warn_flags.all >> 8;
 		break;
 
 	case MTBBUS_DV_VMCU:
