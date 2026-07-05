@@ -37,8 +37,7 @@ typedef union {
 		bool wdrf : 1;
 		bool _ : 1;
 		bool missed_timer : 1;
-		bool vcc_oscilating : 1;
-		uint8_t __ : 2; // padding
+		uint8_t __ : 3; // padding
 		bool tlc_tef : 1; // TLC5940 thermal error flag
 		bool tlc_lod : 1; // TLC5940 LED open flag
 	} bits;
