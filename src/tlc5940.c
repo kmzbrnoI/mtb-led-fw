@@ -65,7 +65,9 @@ void tlc_init(uint32_t out_state) {
 
 	TCCR4B |= (1 << CS40); // start timer, no prescaler
 
-	tlc_out_set(out_state);
+	tlc_outputs_state = out_state;
+	_prepare_out_data(out_state);
+	_out_spi_send();
 
 	io_xlat_on();
 	io_xlat_off();
