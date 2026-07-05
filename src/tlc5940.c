@@ -1,3 +1,4 @@
+#include <avr/interrupt.h>
 #include <avr/cpufunc.h>
 #include <util/delay.h>
 #include <stdbool.h>
@@ -11,7 +12,7 @@
 
 uint32_t tlc_outputs_state = 0;
 uint32_t tlc_outputs_connected = 0;
-bool tlc_sample_request = false;
+volatile bool tlc_sample_request = false;
 
 const uint8_t OUTPUT_MAP[NO_OUTPUTS] = {
 	 7,  6,  5,  4,  3,  2,  1,  0,
@@ -23,8 +24,6 @@ const uint8_t OUTPUT_MAP[NO_OUTPUTS] = {
 ///////////////////////////////////////////////////////////////////////////////
 
 static void _out_spi_send(void);
-static inline void _blank_enable(void);
-static inline void _blank_disable(void);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -32,15 +31,15 @@ void tlc_init(uint32_t out_state) {
 	// Setup pins
 	DDRD |= (1 << PIN_GSCLK);
 	PORTD |= (1 << PIN_GSCLK); // PORT must be active for CTC mode output, see datasheet p. 166
-	PORTB |= (1 << PIN_BLANK) | (1 << PIN_XLAT); // start with BLANK&XLAT high
+	PORTB |= (1 << PIN_BLANK); // start with BLANK high
 	DDRB |= (1 << PIN_BLANK) | (1 << PIN_XLAT);
 	DDRE |= (1 << PE3) | (1 << PE2); // MOSI1 & SS1 out
 	DDRC |= (1 << PC1); // SCK1 out
 	PORTC |= (1 << PC0); // pull-up on MISO just for sure
 
 	// Setup timer 1 for XLAT & BLANK
-	TCCR1A = (1 << COM1B1); // non inverting, Clear OC1A/OC1B on Compare Match when up-counting. Set OC1A/OC1B on Compare Match when down-counting.
 	TCCR1B = (1 << WGM13); // Phase/freq correct PWM, ICR1 top
+	OCR1A = 1; // duty factor on XLAT
 	OCR1B = 2; // duty factor on BLANK
 	ICR1 = 4096;
 
@@ -53,18 +52,28 @@ void tlc_init(uint32_t out_state) {
 	SPSR1 = (1 << SPI2X1);
 	SPCR1 = (1 << SPE1) | (1 << MSTR1); // enable SPI, master mode, frequency=f_osc/2
 
+	TCCR4B |= (1 << CS40); // start timer, no prescaler
+
 	tlc_out_set(out_state);
 
-	TCCR4B |= (1 << CS40); // start timer, no prescaler
+	io_xlat_on();
+	io_xlat_off();
+	TCCR1A = (1 << COM1B1); // non inverting, Clear OC1A/OC1B on Compare Match when up-counting. Set OC1A/OC1B on Compare Match when down-counting.
+	TCCR1B |= (1 << CS10); // start timer
+	tlc_sample_request = true;
 }
 
 void tlc_out_set(uint32_t state) {
 	tlc_outputs_state = state;
 	_out_spi_send();
-	_blank_disable();
-	io_blank_on();
-	io_xlat_on();
-	tlc_sample_request = true;
+
+	// On next BLANK cycle, trigger also XLAT and trigger TIMER1_OVF_vect interrupt, which triggers reading status information
+	if ((TCCR1B & 0x07) > 0) { // if timer is running
+		while ((TCNT1 <= OCR1B) || (TCNT1 >= (ICR1-100))); // wait for timer in state XLAT=LOW, BLANK=LOW
+		TIFR1 |= (1 << TOV1); // clear interrupt flag
+		TIMSK1 = (1 << TOIE1); // enable interrupt
+		TCCR1A |= (1 << COM1A1); // enable XLAT signal
+	}
 }
 
 void _out_spi_send(void) {
@@ -102,10 +111,6 @@ void _out_spi_send(void) {
 }
 
 void tlc_sample_status(void) {
-	io_xlat_off();
-	_blank_enable();
-	_delay_us(2); // according to tlc5940 datasheet
-
 	// ----------- Perform SPI operation -----------
 	SPCR1 |= (1 << CPHA1);
 	uint8_t buf_in[48];
@@ -125,13 +130,9 @@ void tlc_sample_status(void) {
 	error_flags.bits.tlc_tef = (buf_in[2] != 0) || (buf_in[SECOND_TLC_I+2] != 0);
 }
 
-void _blank_enable(void) {
-	TCCR1A |= (1 << COM1B1);
-	TCNT1 = 0;
-	TCCR1B |= (1 << CS10); // start timer
+ISR(TIMER1_OVF_vect) {
+	TIMSK1 &= ~(1 << TOIE1); // disable XLAT signal
+	TCCR1A &= ~(1 << COM1A1); // disable interrupt
+	tlc_sample_request = true;
 }
 
-void _blank_disable(void) {
-	TCCR1A &= ~(1 << COM1B1);
-	TCCR1B &= ~(1 << CS10); // stop timer
-}
