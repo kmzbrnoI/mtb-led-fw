@@ -133,10 +133,13 @@ void _out_spi_send(void) {
 }
 
 void _sample_status(void) {
-	// Typical duration of this function: 100 us.
+	const uint8_t SECOND_TLC_I = TLC_OUT_BUF_SIZE/2;
+	const uint8_t BUF_IN_SIZE = SECOND_TLC_I+3; // we don't need full data, read just part relevant for us
+
+	// Typical duration of this function: 60 us.
 	// ----------- Perform SPI operation -----------
 	SPCR1 |= (1 << CPHA1);
-	uint8_t buf_in[48];
+	uint8_t buf_in[BUF_IN_SIZE];
 	SPDR1 = 0;
 	for (uint8_t i = 0; i < sizeof(buf_in); i++) {
 		while (!(SPSR1 & (1<<SPIF1)));
@@ -147,7 +150,6 @@ void _sample_status(void) {
 	SPCR1 &= ~(1 << CPHA1);
 
 	// ----------- Process SPI in data -----------
-	const uint8_t SECOND_TLC_I = sizeof(buf_in)/2;
 	uint32_t outputs_lod = buf_in[0] | ((uint32_t)buf_in[1] << 24) | ((uint32_t)buf_in[SECOND_TLC_I] << 16) | ((uint32_t)buf_in[SECOND_TLC_I+1] << 8);
 	tlc_outputs_connected = (~outputs_lod) & tlc_outputs_state;
 	error_flags.bits.tlc_tef = (buf_in[2] != 0) || (buf_in[SECOND_TLC_I+2] != 0);
