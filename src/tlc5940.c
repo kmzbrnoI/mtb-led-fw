@@ -1,3 +1,6 @@
+/* TLC5940 interface implementation.
+ */
+
 #include <avr/interrupt.h>
 #include <avr/cpufunc.h>
 #include <util/delay.h>
@@ -43,36 +46,36 @@ void tlc_init(uint32_t out_state) {
 	// Setup pins
 	DDRD |= (1 << PIN_GSCLK);
 	PORTD |= (1 << PIN_GSCLK); // PORT must be active for CTC mode output, see datasheet p. 166
-	PORTB |= (1 << PIN_BLANK); // start with BLANK high
+	PORTB |= (1 << PIN_BLANK); // start with BLANK high (external pullup on PCB)
 	DDRB |= (1 << PIN_BLANK) | (1 << PIN_XLAT);
 	DDRE |= (1 << PE3) | (1 << PE2); // MOSI1 & SS1 out
 	DDRC |= (1 << PC1); // SCK1 out
 	PORTC |= (1 << PC0); // pull-up on MISO just for sure
 
-	// Setup timer 1 for XLAT & BLANK
+	// Setup timer 1 for BLANK (& XLAT in some situations - see below)
 	TCCR1B = (1 << WGM13); // Phase/freq correct PWM, ICR1 top
 	OCR1A = 1; // duty factor on XLAT
 	OCR1B = 2; // duty factor on BLANK
 	ICR1 = 4096;
 
-	// Setup timer 4 @ ~1.054 MHz (GSCLK pin)
-	TCCR4A = (1 << COM4B0); // OC4B toggles output pin PD2
-	TCCR4B = (1 << WGM42); // CTC mode
-	OCR4A = 0; // as-fast-as-possible
-
 	// Setup SPI1
 	SPSR1 = (1 << SPI2X1);
 	SPCR1 = (1 << SPE1) | (1 << MSTR1); // enable SPI, master mode, frequency=f_osc/2
 
+	// Setup timer 4 @ ~1.054 MHz (GSCLK pin)
+	TCCR4A = (1 << COM4B0); // OC4B toggles output pin PD2
+	TCCR4B = (1 << WGM42); // CTC mode
+	OCR4A = 0; // as-fast-as-possible
 	TCCR4B |= (1 << CS40); // start timer, no prescaler
 
+	// do not call tlc_out_set, call '_prepare_out_data' & '_out_spi_send' right now, do not wait for 'tlc_update'
 	tlc_outputs_state = out_state;
 	_prepare_out_data(out_state);
 	_out_spi_send();
 
-	io_xlat_on();
+	io_xlat_on(); // trigger XLAT manually
 	io_xlat_off();
-	TCCR1A = (1 << COM1B1); // non inverting, Clear OC1A/OC1B on Compare Match when up-counting. Set OC1A/OC1B on Compare Match when down-counting.
+	TCCR1A = (1 << COM1B1); // connect BLANK, non inverting, Clear OC1A/OC1B on Compare Match when up-counting. Set OC1A/OC1B on Compare Match when down-counting.
 	TCCR1B |= (1 << CS10); // start timer
 	_flags.sample_request = true;
 }
@@ -90,12 +93,22 @@ void tlc_update(void) {
 	}
 }
 
+/* Output setting has 3 stages:
+ * 1) _prepare_out_data
+ * 2) _out_spi_send
+ * 3) _sample_status
+ * Once a stage finishes, next stage in executed in next call of 'tlc_update'.
+ * This is because each stage takes non-trivial time (see function's docstrings)
+ * and we can't block MCU for long time, because it needs to handle MTBbus communication
+ * continuously.
+ */
 void tlc_out_set(uint32_t state) {
 	tlc_outputs_state = state;
 	_prepare_out_data(state);
 	_flags.send_request = true;
 }
 
+/* Prepare data for TLC5940 into '_buf_out' based on 'state' */
 void _prepare_out_data(uint32_t state) {
 	memset(_buf_out, 0, sizeof(_buf_out));
 
@@ -116,11 +129,12 @@ void _prepare_out_data(uint32_t state) {
 	}
 }
 
+/* Physically send data to TLC5940 over SPI (blocking).
+ * This function should be as-fast-as-possible because it sends data to all 32 outputs
+ * in one blocking call.
+ * Typical duration of this function: 100 us.
+ */
 void _out_spi_send(void) {
-	// This function should be as-fast-as-possible because it sends data to all 32 outputs
-	// in one blocking call.
-	// Typical duration of this function: 100 us.
-
 	SPDR1 = _buf_out[0];
 	for (uint8_t i = 1; i < sizeof(_buf_out); i++) {
 		while (!(SPSR1 & (1<<SPIF1)));
@@ -128,8 +142,8 @@ void _out_spi_send(void) {
 	}
 	while (!(SPSR1 & (1<<SPIF1)));
 
-	// On next BLANK cycle, trigger also XLAT and trigger TIMER1_OVF_vect interrupt, which triggers reading status information
-	if ((TCCR1B & 0x07) > 0) { // if timer is running
+	// On next BLANK cycle, trigger also XLAT and TIMER1_OVF_vect interrupt, which triggers '_sample_status'
+	if ((TCCR1B & 0x07) > 0) { // if timer is running (not in call from tlc_init)
 		while ((TCNT1 <= OCR1B) || (TCNT1 >= (ICR1-100))); // wait for timer in state XLAT=LOW, BLANK=LOW
 		TIFR1 |= (1 << TOV1); // clear interrupt flag
 		TIMSK1 = (1 << TOIE1); // enable interrupt
@@ -137,12 +151,14 @@ void _out_spi_send(void) {
 	}
 }
 
+/* Receive TLC5940 status (e.g. Status Register) (blocking).
+ * Typical duration of this function: 60 us.
+ */
 void _sample_status(void) {
 	const uint8_t SECOND_TLC_I = TLC_OUT_BUF_SIZE/2;
 	const uint8_t BUF_IN_SIZE = SECOND_TLC_I+3; // we don't need full data, read just part relevant for us
 
-	// Typical duration of this function: 60 us.
-	// ----------- Perform SPI operation -----------
+	// ----------- Perform SPI read -----------
 	SPCR1 |= (1 << CPHA1);
 	uint8_t buf_in[BUF_IN_SIZE];
 	SPDR1 = 0;

@@ -1,4 +1,4 @@
-/* Main source file of MTB-LED MCU's ATmega328p firmware.
+/* Main source file of MTB-LED MCU's ATmega328pb firmware.
  */
 
 #include <stdbool.h>
