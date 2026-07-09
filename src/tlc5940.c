@@ -86,7 +86,7 @@ void tlc_update(void) {
 		_sample_status();
 	} else if (tlc_update_request) {
 		tlc_update_request = false;
-		tlc_out_set(tlc_outputs_state);
+		_out_spi_send(); // no need to _prepare_out_data
 	}
 }
 
