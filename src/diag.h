@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define DIAG_UPDATE_PERIOD 10 // 100 ms
+
 typedef union {
 	struct {
 		bool porf : 1;
@@ -47,17 +49,20 @@ typedef union {
 extern mtbbus_warn_flags_t mtbbus_warn_flags;
 extern mtbbus_warn_flags_t mtbbus_warn_flags_old;
 
+typedef struct {
+	volatile uint16_t raw;
+	volatile int16_t degc; // [degrees celsius]
+} tempmeas_t;
+
+extern tempmeas_t mcutemp;
+
+extern volatile uint32_t uptime_seconds;
+
+///////////////////////////////////////////////////////////////////////////////
+
 void diag_init(void);
 void diag_update(void); // called each 100 ms
 void vcc_start_measure(void);
 
-#define DIAG_UPDATE_PERIOD 10 // 100 ms
-extern volatile uint16_t vcc_voltage;
-#define VCC_MAX_DIFF 10 // 0.2 V
-
-extern volatile uint16_t mcu_temperature;
-extern uint8_t ts_offset;
-extern uint8_t ts_gain;
-extern volatile uint32_t uptime_seconds;
 
 #endif
