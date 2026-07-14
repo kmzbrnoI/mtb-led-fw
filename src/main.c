@@ -155,9 +155,9 @@ void init(void) {
 
 	config_load();
 
-	tlc_init(config_safe_state);
+	tlc_init(config.safe_state);
 
-	mtbbus_init(config_mtbbus_addr, config_mtbbus_speed);
+	mtbbus_init(config.mtbbus_addr, config.mtbbus_speed);
 	mtbbus_on_receive = mtbbus_received;
 
 	update_mtbbus_polarity();
@@ -334,14 +334,14 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		break;
 
 	case MTBBUS_CMD_MOSI_SET_CONFIG:
-		if ((data_len >= CONFIG_SIZE) && (!broadcast)) {
+		if ((data_len >= MTBBUS_CONFIG_SIZE) && (!broadcast)) {
 			mtbbus_send_ack();
 
-			memcpy(&config_safe_state, data, sizeof(config_safe_state));
-			memcpy(config_pwm, data+sizeof(config_safe_state), sizeof(config_pwm));
-			for (uint8_t i = 0; i < sizeof(config_pwm); i++)
-				if (config_pwm[i] == 0)
-					config_pwm[i] = 1;
+			memcpy(&config.safe_state, data, sizeof(config.safe_state));
+			memcpy(config.pwm, data+sizeof(config.safe_state), sizeof(config.pwm));
+			for (uint8_t i = 0; i < sizeof(config.pwm); i++)
+				if (config.pwm[i] == 0)
+					config.pwm[i] = 1;
 			config_write = true;
 			tlc_out_set(tlc_outputs_state);
 		} else { goto INVALID_MSG; }
@@ -349,10 +349,10 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 
 	case MTBBUS_CMD_MOSI_GET_CONFIG:
 		if (!broadcast) {
-			mtbbus_output_buf[0] = CONFIG_SIZE+2;
+			mtbbus_output_buf[0] = MTBBUS_CONFIG_SIZE+2;
 			mtbbus_output_buf[1] = MTBBUS_CMD_MISO_MODULE_CONFIG;
-			memcpy((uint8_t*)mtbbus_output_buf+2, &config_safe_state, sizeof(config_safe_state));
-			memcpy((uint8_t*)mtbbus_output_buf+2+sizeof(config_safe_state), config_pwm, sizeof(config_pwm));
+			memcpy((uint8_t*)mtbbus_output_buf+2, &config.safe_state, sizeof(config.safe_state));
+			memcpy((uint8_t*)mtbbus_output_buf+2+sizeof(config.safe_state), config.pwm, sizeof(config.pwm));
 			mtbbus_send_buf_autolen();
 		} else { goto INVALID_MSG; }
 		break;
@@ -387,22 +387,22 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 	case MTBBUS_CMD_MOSI_RESET_OUTPUTS:
 		if (!broadcast)
 			mtbbus_send_ack();
-		tlc_out_set(config_safe_state);
+		tlc_out_set(config.safe_state);
 		break;
 
 	case MTBBUS_CMD_MOSI_CHANGE_ADDR:
 		if (data_len >= 1) {
 			if (broadcast) {
 				if ((state_readdress) && (data[0] > 0)) {
-					config_mtbbus_addr = data[0];
+					config.mtbbus_addr = data[0];
 					state_readdress = false;
-					mtbbus_set_addr(config_mtbbus_addr);
+					mtbbus_set_addr(config.mtbbus_addr);
 				}
 			} else {
 				if (data[0] > 0) {
-					config_mtbbus_addr = data[0];
+					config.mtbbus_addr = data[0];
 					mtbbus_send_ack();
-					mtbbus_set_addr(config_mtbbus_addr);
+					mtbbus_set_addr(config.mtbbus_addr);
 				} else {
 					mtbbus_send_error(MTBBUS_ERROR_BAD_ADDRESS);
 				}
@@ -412,7 +412,7 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 
 	case MTBBUS_CMD_MOSI_CHANGE_SPEED:
 		if (data_len >= 1) {
-			config_mtbbus_speed = data[0];
+			config.mtbbus_speed = data[0];
 			config_write = true;
 			mtbbus_set_speed(data[0]);
 
@@ -515,7 +515,7 @@ void mtbbus_auto_speed_next(void) {
 
 void mtbbus_auto_speed_received(void) {
 	mtbbus_auto_speed_in_progress = false;
-	config_mtbbus_speed = mtbbus_auto_speed_last;
+	config.mtbbus_speed = mtbbus_auto_speed_last;
 	config_write = true;
 	io_led_blue_off();
 }
@@ -588,7 +588,7 @@ void send_diag_value(uint8_t i) {
 
 void mtbbus_set_addr(uint8_t addr) {
 	mtbbus_addr = addr;
-	config_mtbbus_addr = addr;
+	config.mtbbus_addr = addr;
 	config_write = true;
 }
 

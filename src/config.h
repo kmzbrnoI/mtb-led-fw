@@ -15,12 +15,16 @@ extern bool config_write; // request to write config to EEPROM
 ///////////////////////////////////////////////////////////////////////////////
 // Configuration variables
 
-extern uint32_t config_safe_state;
-extern uint8_t config_pwm[NO_OUTPUTS];
-extern uint8_t config_mtbbus_addr;
-extern uint8_t config_mtbbus_speed;
+typedef struct {
+	uint32_t safe_state;
+	uint8_t pwm[NO_OUTPUTS];
+	uint8_t mtbbus_addr;
+	uint8_t mtbbus_speed;
+} config_t;
 
-#define CONFIG_SIZE (sizeof(config_safe_state)+sizeof(config_pwm))
+extern config_t config;
+
+#define MTBBUS_CONFIG_SIZE (sizeof(config.safe_state)+sizeof(config.pwm))
 
 ///////////////////////////////////////////////////////////////////////////////
 

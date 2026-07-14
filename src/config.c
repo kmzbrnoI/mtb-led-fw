@@ -3,11 +3,8 @@
 #include "config.h"
 #include "mtbbus.h"
 
-uint32_t config_safe_state;
-uint8_t config_pwm[NO_OUTPUTS];
+config_t config;
 bool config_write = false;
-uint8_t config_mtbbus_addr;
-uint8_t config_mtbbus_speed;
 
 #define EEPROM_ADDR_VERSION                ((uint8_t*)0x00)
 #define EEPROM_ADDR_MTBBUS_SPEED           ((uint8_t*)0x01)
@@ -25,28 +22,28 @@ void config_load(void) {
 	uint8_t version = eeprom_read_byte(EEPROM_ADDR_VERSION);
 	if (version == 0xFF) {
 		// default EEPROM content → reset config
-		config_mtbbus_speed = MTBBUS_SPEED_38400;
-		config_mtbbus_addr = 1;
-		config_safe_state = 0;
-		memset(config_pwm, 100, sizeof(config_pwm));
+		config.mtbbus_speed = MTBBUS_SPEED_38400;
+		config.mtbbus_addr = 1;
+		config.safe_state = 0;
+		memset(config.pwm, 100, sizeof(config.pwm));
 		while (!config_save()); // loop until everything saved
 		return;
 	}
 
-	config_mtbbus_speed = eeprom_read_byte(EEPROM_ADDR_MTBBUS_SPEED);
-	if (config_mtbbus_speed > MTBBUS_SPEED_MAX)
-		config_mtbbus_speed = MTBBUS_SPEED_38400;
+	config.mtbbus_speed = eeprom_read_byte(EEPROM_ADDR_MTBBUS_SPEED);
+	if (config.mtbbus_speed > MTBBUS_SPEED_MAX)
+		config.mtbbus_speed = MTBBUS_SPEED_38400;
 
-	config_mtbbus_addr = eeprom_read_byte(EEPROM_ADDR_MTBBUS_ADDR);
-	if (config_mtbbus_addr == 0) // address 0 is invalid (it is broadcast)
-		config_mtbbus_addr = 1;
+	config.mtbbus_addr = eeprom_read_byte(EEPROM_ADDR_MTBBUS_ADDR);
+	if (config.mtbbus_addr == 0) // address 0 is invalid (it is broadcast)
+		config.mtbbus_addr = 1;
 
 	uint8_t boot = eeprom_read_byte(EEPROM_ADDR_BOOT);
 	if (boot != CONFIG_BOOT_NORMAL)
 		eeprom_write_byte(EEPROM_ADDR_BOOT, CONFIG_BOOT_NORMAL);
 
-	config_safe_state = eeprom_read_dword(EEPROM_ADDR_SAFE_STATE);
-	eeprom_read_block(config_pwm, EEPROM_ADDR_PWM, sizeof(config_pwm));
+	config.safe_state = eeprom_read_dword(EEPROM_ADDR_SAFE_STATE);
+	eeprom_read_block(config.pwm, EEPROM_ADDR_PWM, sizeof(config.pwm));
 }
 
 bool config_save(void) {
@@ -57,18 +54,18 @@ bool config_save(void) {
 	if (!eeprom_is_ready()) return false;
 	eeprom_update_byte(EEPROM_ADDR_VERSION, 1);
 	if (!eeprom_is_ready()) return false;
-	eeprom_update_byte(EEPROM_ADDR_MTBBUS_SPEED, config_mtbbus_speed);
+	eeprom_update_byte(EEPROM_ADDR_MTBBUS_SPEED, config.mtbbus_speed);
 	if (!eeprom_is_ready()) return false;
-	eeprom_update_byte(EEPROM_ADDR_MTBBUS_ADDR, config_mtbbus_addr);
+	eeprom_update_byte(EEPROM_ADDR_MTBBUS_ADDR, config.mtbbus_addr);
 
-	for (uint8_t i = 0; i < sizeof(config_safe_state); i++) {
+	for (uint8_t i = 0; i < sizeof(config.safe_state); i++) {
 		if (!eeprom_is_ready()) return false;
-		eeprom_update_byte((uint8_t*)EEPROM_ADDR_SAFE_STATE+i, *((uint8_t*)&config_safe_state+i));
+		eeprom_update_byte((uint8_t*)EEPROM_ADDR_SAFE_STATE+i, *((uint8_t*)&config.safe_state+i));
 	}
 
-	for (uint8_t i = 0; i < sizeof(config_pwm); i++) {
+	for (uint8_t i = 0; i < sizeof(config.pwm); i++) {
 		if (!eeprom_is_ready()) return false;
-		eeprom_update_byte(EEPROM_ADDR_PWM+i, config_pwm[i]);
+		eeprom_update_byte(EEPROM_ADDR_PWM+i, config.pwm[i]);
 	}
 
 	return eeprom_is_ready(); // true iff no write done

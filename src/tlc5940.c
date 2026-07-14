@@ -117,10 +117,10 @@ void _prepare_out_data(uint32_t state) {
 	uint8_t bufi = 0;
 	for (uint8_t i = 0; i < NO_OUTPUTS; i += 2) {
 		if (_outputs&0x80000000) {
-			_buf_out[bufi] = config_pwm[_OUTPUT_MAP[i]];
+			_buf_out[bufi] = config.pwm[_OUTPUT_MAP[i]];
 		}
 		if (_outputs&0x40000000) {
-			const uint8_t pwm = config_pwm[_OUTPUT_MAP[i+1]];
+			const uint8_t pwm = config.pwm[_OUTPUT_MAP[i+1]];
 			_buf_out[bufi+1] = pwm >> 4;
 			_buf_out[bufi+2] = pwm << 4;
 		}
