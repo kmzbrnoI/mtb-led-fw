@@ -221,7 +221,11 @@ void leds_update(void) {
 			io_led_green_off();
 	}
 
+	static bool was_led_red_flashing = false;
 	bool led_red_flashing = error_flags.all;
+	if ((!led_red_flashing) && (was_led_red_flashing))
+		io_led_red_off();
+	was_led_red_flashing = led_red_flashing;
 
 	if (led_red_counter > 0) {
 		led_red_counter--;
