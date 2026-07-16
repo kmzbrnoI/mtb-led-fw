@@ -15,7 +15,8 @@
 
 #define TLC_OUT_BUF_SIZE 48 // NO_OUTPUTS * 1.5 (each output is 12 bits)
 
-uint32_t tlc_outputs_state = 0;
+uint32_t tlc_outputs_want_state = 0;
+uint32_t tlc_outputs_real_state = 0;
 uint32_t tlc_outputs_connected = 0;
 uint8_t _buf_out[TLC_OUT_BUF_SIZE];
 volatile bool tlc_update_request;
@@ -69,7 +70,7 @@ void tlc_init(uint32_t out_state) {
 	TCCR4B |= (1 << CS40); // start timer, no prescaler
 
 	// do not call tlc_out_set, call '_prepare_out_data' & '_out_spi_send' right now, do not wait for 'tlc_update'
-	tlc_outputs_state = out_state;
+	tlc_outputs_want_state = out_state;
 	_prepare_out_data(out_state);
 	_out_spi_send();
 
@@ -103,17 +104,15 @@ void tlc_update(void) {
  * continuously.
  */
 void tlc_out_set(uint32_t state) {
-	tlc_outputs_state = state;
-	_prepare_out_data(state);
+	tlc_outputs_want_state = state;
+	tlc_outputs_real_state = (error_flags.bits.mcutemp_critical) ? 0 : state;
+	_prepare_out_data(tlc_outputs_real_state);
 	_flags.send_request = true;
 }
 
 /* Prepare data for TLC5940 into '_buf_out' based on 'state' */
 void _prepare_out_data(uint32_t state) {
 	memset(_buf_out, 0, sizeof(_buf_out));
-
-	if (error_flags.bits.mcutemp_critical)
-		return;
 
 	// need to process 2 outputs in one iteration, because each output is 12 bits
 	uint32_t _outputs = (state << 24) | (state >> 8);
@@ -175,9 +174,9 @@ void _sample_status(void) {
 
 	// ----------- Process SPI in data -----------
 	uint32_t outputs_lod = buf_in[0] | ((uint32_t)buf_in[1] << 24) | ((uint32_t)buf_in[SECOND_TLC_I] << 16) | ((uint32_t)buf_in[SECOND_TLC_I+1] << 8);
-	tlc_outputs_connected = (~outputs_lod) & tlc_outputs_state;
+	tlc_outputs_connected = (~outputs_lod) & tlc_outputs_real_state;
 	mtbbus_warn_flags.bits.tlc_tef = (buf_in[2] != 0) || (buf_in[SECOND_TLC_I+2] != 0);
-	mtbbus_warn_flags.bits.tlc_lod = (tlc_outputs_connected != tlc_outputs_state);
+	mtbbus_warn_flags.bits.tlc_lod = (tlc_outputs_connected != tlc_outputs_real_state);
 }
 
 ISR(TIMER1_OVF_vect) {

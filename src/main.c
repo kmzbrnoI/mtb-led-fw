@@ -349,7 +349,7 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 				if (config.pwm[i] == 0)
 					config.pwm[i] = 1;
 			config_write = true;
-			tlc_out_set(tlc_outputs_state);
+			tlc_out_set(tlc_outputs_want_state);
 		} else { goto INVALID_MSG; }
 		break;
 

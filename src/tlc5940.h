@@ -11,7 +11,7 @@
 
 #include "io.h"
 
-extern uint32_t tlc_outputs_state; // read-only variable
+extern uint32_t tlc_outputs_want_state; // read-only variable
 extern uint32_t tlc_outputs_connected; // read-only variable
 extern volatile bool tlc_update_request;
 

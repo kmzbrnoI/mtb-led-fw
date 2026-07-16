@@ -91,12 +91,12 @@ void mcutemp_limits_check(void) {
 	if (error_flags.bits.mcutemp_critical) {
 		if (mcutemp.degc <= MCUTEMP_HIGH_ERROR_OFF_THRESHOLD) {
 			error_flags.bits.mcutemp_critical = false;
-			tlc_out_set(tlc_outputs_state);
+			tlc_out_set(tlc_outputs_want_state);
 		}
 	} else {
 		if (mcutemp.degc >= MCUTEMP_HIGH_ERROR_ON_THRESHOLD) {
 			error_flags.bits.mcutemp_critical = true;
-			tlc_out_set(tlc_outputs_state);
+			tlc_out_set(tlc_outputs_want_state);
 		}
 	}
 }
