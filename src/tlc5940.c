@@ -112,6 +112,9 @@ void tlc_out_set(uint32_t state) {
 void _prepare_out_data(uint32_t state) {
 	memset(_buf_out, 0, sizeof(_buf_out));
 
+	if (error_flags.bits.mcutemp_critical)
+		return;
+
 	// need to process 2 outputs in one iteration, because each output is 12 bits
 	uint32_t _outputs = (state << 24) | (state >> 8);
 	uint8_t bufi = 0;

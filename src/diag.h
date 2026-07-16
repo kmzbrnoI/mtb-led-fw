@@ -7,6 +7,10 @@
 #include <stdint.h>
 
 #define DIAG_UPDATE_PERIOD 10 // 100 ms
+#define MCUTEMP_HIGH_WARNING_ON_THRESHOLD 50 // [°C] quite low number, but this indicates e.g. 100 °C of TLC5940
+#define MCUTEMP_HIGH_WARNING_OFF_THRESHOLD 45 // [°C]
+#define MCUTEMP_HIGH_ERROR_ON_THRESHOLD 60 // [°C]
+#define MCUTEMP_HIGH_ERROR_OFF_THRESHOLD 55 // [°C]
 
 typedef union {
 	struct {
@@ -25,11 +29,13 @@ typedef union {
 	struct {
 		bool _UNUSED : 1; // was 'addr_zero'
 		bool bad_mtbbus_polarity : 1;
+		bool mcutemp_critical : 1;
 	} bits;
 	uint8_t all;
 } error_flags_t;
 
 extern error_flags_t error_flags;
+extern error_flags_t error_flags_old;
 
 
 typedef union {
@@ -43,6 +49,7 @@ typedef union {
 		bool tlc_tef : 1; // TLC5940 thermal error flag
 		bool tlc_lod : 1; // TLC5940 LED open flag
 		bool ts_offset_uncalibrated : 1; // temperature sensor offset uncalibrated (need calubration after manufacturing)
+		bool mcutemp_high : 1;
 	} bits;
 	uint16_t all;
 } mtbbus_warn_flags_t;

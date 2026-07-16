@@ -305,9 +305,11 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 			} else {
 				last_input_changed = false;
 
-				if ((mtbbus_warn_flags.all != mtbbus_warn_flags_old.all) || (last_diag_changed && !last_ok)) {
+				if ((error_flags_old.all != error_flags.all) || (mtbbus_warn_flags.all != mtbbus_warn_flags_old.all) ||
+				    (last_diag_changed && !last_ok)) {
 					last_diag_changed = true;
 					mtbbus_warn_flags_old = mtbbus_warn_flags;
+					error_flags_old = error_flags;
 					send_diag_value(MTBBUS_DV_STATE);
 				} else {
 					mtbbus_send_ack();
@@ -560,12 +562,18 @@ void send_diag_value(uint8_t i) {
 
 	case MTBBUS_DV_STATE:
 		mtbbus_output_buf[0] = 2+1;
-		mtbbus_output_buf[3] = (mtbbus_warn_flags.all > 0) << 1;
+		mtbbus_output_buf[3] = (error_flags.all > 0) | ((mtbbus_warn_flags.all > 0) << 1);
 		break;
 
 	case MTBBUS_DV_UPTIME:
 		mtbbus_output_buf[0] = 2+sizeof(uptime_seconds);
 		MEMCPY_FROM_VAR(&mtbbus_output_buf[3], uptime_seconds);
+		break;
+
+	case MTBBUS_DV_ERRORS:
+		error_flags_old = error_flags;
+		mtbbus_output_buf[0] = 2+1;
+		mtbbus_output_buf[3] = error_flags.all;
 		break;
 
 	case MTBBUS_DV_WARNINGS:
@@ -605,6 +613,7 @@ void send_diag_value(uint8_t i) {
 	default:
 		mtbbus_output_buf[0] = 2+0;
 		mtbbus_warn_flags_old = mtbbus_warn_flags;
+		error_flags_old = error_flags;
 	}
 
 	mtbbus_send_buf_autolen();
