@@ -42,6 +42,7 @@ typedef union {
 		uint8_t __ : 3; // padding
 		bool tlc_tef : 1; // TLC5940 thermal error flag
 		bool tlc_lod : 1; // TLC5940 LED open flag
+		bool ts_offset_uncalibrated : 1; // temperature sensor offset uncalibrated (need calubration after manufacturing)
 	} bits;
 	uint16_t all;
 } mtbbus_warn_flags_t;

@@ -2,6 +2,7 @@
 #include <string.h>
 #include "config.h"
 #include "mtbbus.h"
+#include "diag.h"
 
 config_t config;
 bool config_write = false;
@@ -15,7 +16,9 @@ bool config_write = false;
 #define EEPROM_ADDR_BOOTLOADER_VER_MINOR   ((uint8_t*)0x09)
 #define EEPROM_ADDR_BOOTLOADER_MCUSR       ((uint8_t*)0x0A)
 #define EEPROM_ADDR_SAFE_STATE             ((uint32_t*)0x10)
-#define EEPROM_ADDR_PWM                    ((uint8_t*)0x20)
+#define EEPROM_ADDR_TS_OFFSET              ((uint16_t*)0x18) // actually int16_t*
+#define EEPROM_ADDR_TS_OFFSET_UNCALIB      ((uint8_t*)0x1A) // actually bool*
+#define EEPROM_ADDR_PWM                    ((uint8_t*)0x20) // size=32B range=0x20-0x3F
 
 
 void config_load(void) {
@@ -26,6 +29,7 @@ void config_load(void) {
 		config.mtbbus_addr = 1;
 		config.safe_state = 0;
 		memset(config.pwm, 100, sizeof(config.pwm));
+		config.ts_offset = -245; // see datasheet '28.8 Temperature Measurement'
 		while (!config_save()); // loop until everything saved
 		return;
 	}
@@ -42,6 +46,8 @@ void config_load(void) {
 	if (boot != CONFIG_BOOT_NORMAL)
 		eeprom_write_byte(EEPROM_ADDR_BOOT, CONFIG_BOOT_NORMAL);
 
+	config.ts_offset = eeprom_read_word(EEPROM_ADDR_TS_OFFSET);
+	mtbbus_warn_flags.bits.ts_offset_uncalibrated = eeprom_read_byte(EEPROM_ADDR_TS_OFFSET_UNCALIB) > 0;
 	config.safe_state = eeprom_read_dword(EEPROM_ADDR_SAFE_STATE);
 	eeprom_read_block(config.pwm, EEPROM_ADDR_PWM, sizeof(config.pwm));
 }
@@ -57,6 +63,14 @@ bool config_save(void) {
 	eeprom_update_byte(EEPROM_ADDR_MTBBUS_SPEED, config.mtbbus_speed);
 	if (!eeprom_is_ready()) return false;
 	eeprom_update_byte(EEPROM_ADDR_MTBBUS_ADDR, config.mtbbus_addr);
+
+	for (uint8_t i = 0; i < sizeof(config.ts_offset); i++) {
+		if (!eeprom_is_ready()) return false;
+		eeprom_update_byte((uint8_t*)EEPROM_ADDR_TS_OFFSET+i, *((uint8_t*)&config.ts_offset+i));
+	}
+
+	if (!eeprom_is_ready()) return false;
+	eeprom_update_byte(EEPROM_ADDR_TS_OFFSET_UNCALIB, mtbbus_warn_flags.bits.ts_offset_uncalibrated);
 
 	for (uint8_t i = 0; i < sizeof(config.safe_state); i++) {
 		if (!eeprom_is_ready()) return false;

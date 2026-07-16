@@ -20,6 +20,7 @@ typedef struct {
 	uint8_t pwm[NO_OUTPUTS];
 	uint8_t mtbbus_addr;
 	uint8_t mtbbus_speed;
+	int16_t ts_offset; // temperature sensor offset
 } config_t;
 
 extern config_t config;

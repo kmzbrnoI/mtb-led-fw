@@ -444,6 +444,25 @@ void mtbbus_received(bool broadcast, uint8_t command_code, uint8_t *data, uint8_
 		} else { goto INVALID_MSG; }
 		break;
 
+	case MTBBUS_CMD_MOSI_SPECIFIC:
+		if ((data_len >= 1) && (!broadcast)) {
+			switch (data[0]) {
+			case 1:
+				if (data_len < 3)
+					goto INVALID_MSG;
+				int16_t offset;
+				memcpy(&offset, &data[1], sizeof(offset));
+				config.ts_offset += offset;
+				mtbbus_warn_flags.bits.ts_offset_uncalibrated = false;
+				config_write = true;
+				mtbbus_send_ack();
+				break;
+			default:
+				goto INVALID_MSG;
+			}
+		} else { goto INVALID_MSG; }
+		break;
+
 INVALID_MSG:
 	default:
 		if (!broadcast)
@@ -557,9 +576,10 @@ void send_diag_value(uint8_t i) {
 		break;
 
 	case MTBBUS_DV_TEMPMCU:
-		mtbbus_output_buf[0] = 2+4;
+		mtbbus_output_buf[0] = 2+6;
 		memcpy((uint8_t*)mtbbus_output_buf+3, (uint16_t*)&mcutemp.raw, 2);
 		memcpy((uint8_t*)mtbbus_output_buf+5, (uint16_t*)&mcutemp.degc, 2);
+		memcpy((uint8_t*)mtbbus_output_buf+7, &config.ts_offset, 2);
 		break;
 
 	case MTBBUS_DV_MTBBUS_RECEIVED:

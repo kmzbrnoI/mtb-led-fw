@@ -3,6 +3,7 @@
 #include <avr/boot.h>
 #include <string.h>
 #include "diag.h"
+#include "config.h"
 
 /* Diagnostic
  * Measurement of MCU voltage & temperature is highly inaccurate. V_BG should be
@@ -62,5 +63,5 @@ ISR(ADC_vect) {
 	value |= (ADCH << 8);
 
 	mcutemp.raw = value;
-	mcutemp.degc = (int16_t)value-290;
+	mcutemp.degc = (int16_t)value + config.ts_offset;
 }
