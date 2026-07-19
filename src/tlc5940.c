@@ -4,6 +4,7 @@
 #include <avr/interrupt.h>
 #include <avr/cpufunc.h>
 #include <util/delay.h>
+#include <util/atomic.h>
 #include <stdbool.h>
 #include <string.h>
 #include "tlc5940.h"
@@ -146,10 +147,12 @@ void _out_spi_send(void) {
 
 	// On next BLANK cycle, trigger also XLAT and TIMER1_OVF_vect interrupt, which triggers '_sample_status'
 	if ((TCCR1B & 0x07) > 0) { // if timer is running (not in call from tlc_init)
-		while ((TCNT1 <= OCR1B) || (TCNT1 >= (ICR1-100))); // wait for timer in state XLAT=LOW, BLANK=LOW
-		TIFR1 |= (1 << TOV1); // clear interrupt flag
-		TIMSK1 = (1 << TOIE1); // enable interrupt
-		TCCR1A |= (1 << COM1A1); // enable XLAT signal
+		while (TCNT1 <= (OCR1B+100)); // wait for timer in state XLAT=LOW, BLANK=LOW (phase/freq correct PWM mode used - TCNT1 goes up and down)
+		ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+			TIFR1 |= (1 << TOV1); // clear interrupt flag
+			TIMSK1 = (1 << TOIE1); // enable interrupt
+			TCCR1A |= (1 << COM1A1); // enable XLAT signal
+		}
 	}
 }
 
