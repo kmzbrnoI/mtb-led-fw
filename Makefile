@@ -26,11 +26,10 @@ LDFLAGS += -Wl,-section-start=.fwattr=$(CRC_POS)
 
 #---------------- Programming Options (avrdude) ----------------
 
-AVRDUDE_PROGRAMMER = stk500
-AVRDUDE_PORT = /dev/ttyUSB0
+AVRDUDE_PROGRAMMER = pickit5_isp
 AVRDUDE_WRITE_FLASH = -U flash:w:$(TARGET)_with_bootloader.hex
 AVRDUDE_WRITE_EEPROM = -U eeprom:w:$(TARGET).eep
-AVRDUDE_FLAGS = -p $(MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER)
+AVRDUDE_FLAGS = -p $(MCU) -c $(AVRDUDE_PROGRAMMER)
 
 #============================================================================
 
