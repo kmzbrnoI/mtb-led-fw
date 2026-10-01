@@ -30,6 +30,7 @@ void config_load(void) {
 		config.safe_state = 0;
 		memset(config.pwm, 100, sizeof(config.pwm));
 		config.ts_offset = -245; // see datasheet '28.8 Temperature Measurement'
+		mtbbus_warn_flags.bits.ts_offset_uncalibrated = true;
 		while (!config_save()); // loop until everything saved
 		return;
 	}
